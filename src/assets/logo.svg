@@ -1,0 +1,18 @@
+<svg width="150" height="40" viewBox="0 0 150 40" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .text { font-family: Arial, sans-serif; font-weight: bold; }
+    .icon { fill: #1976d2; }
+    .text-primary { fill: #1976d2; }
+    .text-secondary { fill: #666; }
+  </style>
+  
+  <!-- Icon -->
+  <g class="icon" transform="translate(0,8)">
+    <path d="M20 0C8.954 0 0 8.954 0 20s8.954 20 20 20 20-8.954 20-20S31.046 0 20 0zm0 36c-8.837 0-16-7.163-16-16S11.163 4 20 4s16 7.163 16 16-7.163 16-16 16z"/>
+    <path d="M20 8c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12S26.627 8 20 8zm2 18h-4v-2h4v2zm-4-4v-8h4v8h-4z"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="50" y="25" class="text text-primary">Money</text>
+  <text x="105" y="25" class="text text-secondary">Track</text>
+</svg> 
