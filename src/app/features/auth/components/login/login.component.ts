@@ -115,11 +115,12 @@ import { AuthService } from '../../../../core/services/auth.service';
         <mat-card-footer>
           <p class="footer-text">
             Chưa có tài khoản?
-            <a routerLink="/auth/register" class="register-link"
+            <a (click)="navigateToRegister()" class="register-link"
               >Đăng ký ngay</a
             >
           </p>
         </mat-card-footer>
+ 
       </mat-card>
     </div>
   `,
@@ -195,12 +196,14 @@ import { AuthService } from '../../../../core/services/auth.service';
             background-color: white;
             border: 1px solid #dadce0;
             border-radius: 4px;
-            box-shadow: 0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
-            transition: background-color .3s, box-shadow .3s;
-            
+            box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3),
+              0 1px 3px 1px rgba(60, 64, 67, 0.15);
+            transition: background-color 0.3s, box-shadow 0.3s;
+
             &:hover {
               background-color: #f8f9fa;
-              box-shadow: 0 1px 2px 0 rgba(60,64,67,.3), 0 2px 6px 2px rgba(60,64,67,.15);
+              box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3),
+                0 2px 6px 2px rgba(60, 64, 67, 0.15);
             }
 
             .google-logo {
@@ -211,10 +214,10 @@ import { AuthService } from '../../../../core/services/auth.service';
 
             .button-text {
               color: #3c4043;
-              font-family: "Google Sans", Roboto, Arial, sans-serif;
+              font-family: 'Google Sans', Roboto, Arial, sans-serif;
               font-size: 14px;
               font-weight: 500;
-              letter-spacing: .25px;
+              letter-spacing: 0.25px;
               line-height: 16px;
             }
           }
@@ -230,6 +233,7 @@ import { AuthService } from '../../../../core/services/auth.service';
           color: #1a73e8;
           text-decoration: none;
           font-weight: 500;
+          cursor: pointer;
 
           &:hover {
             text-decoration: underline;
@@ -279,5 +283,9 @@ export class LoginComponent {
     } catch (error) {
       console.error('Google login error:', error);
     }
+  }
+
+  navigateToRegister(): void {
+    this.router.navigate(['/auth/register']);
   }
 }

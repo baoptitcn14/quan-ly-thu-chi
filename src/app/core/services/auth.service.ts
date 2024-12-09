@@ -6,6 +6,7 @@ import {
   signInWithPopup,
   signOut,
   User as FirebaseUser,
+  createUserWithEmailAndPassword,
 } from '@angular/fire/auth';
 import { Firestore, doc, getDoc, setDoc, updateDoc } from '@angular/fire/firestore';
 import { BehaviorSubject, Observable, from, map, switchMap, tap } from 'rxjs';
@@ -163,5 +164,20 @@ export class AuthService {
 
   public getCurrentUserValue(): User | null {
     return this.currentUserSubject.getValue();
+  }
+
+  async register(email: string, password: string): Promise<void> {
+    try {
+      const credential = await createUserWithEmailAndPassword(
+        this.auth,
+        email,
+        password
+      );
+      const userData = await this.updateUserData(credential.user);
+      this.setCurrentUser(userData);
+    } catch (error) {
+      console.error('Register error:', error);
+      throw error;
+    }
   }
 }

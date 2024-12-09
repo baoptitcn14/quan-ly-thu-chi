@@ -7,8 +7,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:ssr:quan-ly-chi-tieu": "node dist/quan-ly-chi-tieu/server/server.mjs",
-    "vercel-build": "ng build"
+    "serve:ssr:quan-ly-chi-tieu": "node dist/quan-ly-chi-tieu/server/server.mjs"
   },
   "private": true,
   "dependencies": {

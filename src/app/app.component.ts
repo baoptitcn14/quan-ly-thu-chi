@@ -33,12 +33,4 @@ import { Router } from '@angular/router';
 })
 export class AppComponent {
   title = 'quan-ly-chi-tieu';
-
-  constructor(private authService: AuthService, private router: Router) {
-    this.authService.isAuthenticated().subscribe(authenticated => {
-      if (!authenticated) {
-        this.router.navigate(['/auth/login']);
-      }
-    });
-  }
 }
