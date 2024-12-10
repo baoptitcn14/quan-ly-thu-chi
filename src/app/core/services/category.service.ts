@@ -1,0 +1,75 @@
+import { Injectable } from '@angular/core';
+import { 
+  Firestore, 
+  collection, 
+  addDoc, 
+  deleteDoc, 
+  doc, 
+  query, 
+  where, 
+  collectionData, 
+  getDoc 
+} from '@angular/fire/firestore';
+import { Observable, of } from 'rxjs';
+import { AuthService } from './auth.service';
+import { UserDataService } from './user-data.service';
+
+export interface Category {
+  id?: string;
+  userId: string;
+  name: string;
+  icon?: string;
+  type: 'income' | 'expense' | 'both';
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class CategoryService {
+  private readonly collectionName = 'categories';
+
+  constructor(
+    private firestore: Firestore,
+    private authService: AuthService,
+    private userDataService: UserDataService
+  ) {}
+
+  getCategories(): Observable<Category[]> {
+    const userId = this.authService.getCurrentUserId();
+    if (!userId) return of([]);
+    
+    const categoriesRef = collection(this.firestore, this.collectionName);
+    const categoriesQuery = query(
+      categoriesRef,
+      where('userId', '==', userId)
+    );
+    
+    return collectionData(categoriesQuery, { idField: 'id' }) as Observable<Category[]>;
+  }
+
+  async addCategory(category: Omit<Category, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<void> {
+    const userId = this.authService.getCurrentUserId();
+    if (!userId) throw new Error('User must be authenticated');
+    
+    await this.userDataService.addCustomCategory(userId, category);
+  }
+
+  async deleteCategory(categoryId: string): Promise<void> {
+    const docRef = doc(this.firestore, this.collectionName, categoryId);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new Error('Danh mục không tồn tại');
+    }
+
+    const category = docSnap.data() as Category;
+    if (category.isDefault) {
+      throw new Error('Không thể xóa danh mục mặc định');
+    }
+
+    await deleteDoc(docRef);
+  }
+} 

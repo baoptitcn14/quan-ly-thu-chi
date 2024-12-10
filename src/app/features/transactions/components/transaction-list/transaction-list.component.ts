@@ -7,6 +7,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { TransactionService, Transaction } from '../../../../core/services/transaction.service';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-transaction-list',
@@ -18,7 +20,8 @@ import { TransactionService, Transaction } from '../../../../core/services/trans
     MatIconModule,
     MatCardModule,
     MatDividerModule,
-    MatMenuModule
+    MatMenuModule,
+    MatDialogModule
   ],
   template: `
     <div class="transactions-container">
@@ -35,7 +38,7 @@ import { TransactionService, Transaction } from '../../../../core/services/trans
           <div class="transaction-item">
             <div class="info">
               <h3>{{ transaction.description }}</h3>
-              <span class="category">{{ transaction.category }}</span>
+              <span class="category">{{ transaction.categoryName }}</span>
             </div>
             <div class="actions">
               <span [class.expense]="transaction.type === 'expense'" class="amount">
@@ -96,6 +99,8 @@ import { TransactionService, Transaction } from '../../../../core/services/trans
             gap: 1rem;
             .amount {
               font-weight: 500;
+              color: #00B050;
+
               &.expense {
                 color: #f44336;
               }
@@ -111,7 +116,8 @@ export class TransactionListComponent implements OnInit {
 
   constructor(
     private transactionService: TransactionService,
-    private router: Router
+    private router: Router,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit() {
@@ -134,13 +140,23 @@ export class TransactionListComponent implements OnInit {
   async deleteTransaction(id: string | undefined) {
     if (!id) return;
     
-    if (confirm('Bạn có chắc chắn muốn xóa giao dịch này?')) {
-      try {
-        await this.transactionService.deleteTransaction(id);
-        this.loadTransactions();
-      } catch (error) {
-        console.error('Error deleting transaction:', error);
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Xác nhận xóa',
+        message: 'Bạn có chắc chắn muốn xóa giao dịch này?'
       }
-    }
+    });
+
+    dialogRef.afterClosed().subscribe(async (result) => {
+      if (result) {
+        try {
+          await this.transactionService.deleteTransaction(id);
+          this.loadTransactions();
+        } catch (error) {
+          console.error('Error deleting transaction:', error);
+        }
+      }
+    });
   }
 } 

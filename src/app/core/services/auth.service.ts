@@ -13,6 +13,7 @@ import { BehaviorSubject, Observable, from, map, switchMap, tap } from 'rxjs';
 import { User } from '../models/user.interface';
 import { CookieService } from 'ngx-cookie-service';
 import { Router } from '@angular/router';
+import { UserDataService } from './user-data.service';
 
 @Injectable({
   providedIn: 'root',
@@ -28,7 +29,8 @@ export class AuthService {
     private auth: Auth,
     private firestore: Firestore,
     private cookieService: CookieService,
-    private router: Router
+    private router: Router,
+    private userDataService: UserDataService
   ) {
     // Theo dõi trạng thái đăng nhập
     this.auth.onAuthStateChanged(async (firebaseUser) => {
@@ -65,7 +67,18 @@ export class AuthService {
     try {
       const provider = new GoogleAuthProvider();
       const credential = await signInWithPopup(this.auth, provider);
+      // Kiểm tra user mới trước khi update data
+      const userDoc = doc(this.firestore, `users/${credential.user.uid}`);
+      const userSnapshot = await getDoc(userDoc);
+      const isNewUser = !userSnapshot.exists();
+
       const userData = await this.updateUserData(credential.user);
+      
+      if (isNewUser) {
+        // Khởi tạo danh mục mặc định cho user mới
+        await this.userDataService.initializeUserData(userData.uid);
+      }
+      
       this.setCurrentUser(userData);
     } catch (error) {
       console.error('Google login error:', error);
@@ -174,6 +187,7 @@ export class AuthService {
         password
       );
       const userData = await this.updateUserData(credential.user);
+      await this.userDataService.initializeUserData(userData.uid);
       this.setCurrentUser(userData);
     } catch (error) {
       console.error('Register error:', error);

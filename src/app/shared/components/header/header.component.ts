@@ -17,19 +17,14 @@ import { ProfileDialogComponent } from './profile-dialog.component';
       <div class="header-container">
         <div class="logo">
           <a routerLink="/">
-            <img src="assets/logo.svg" alt="MoneyTrack Logo" />
+            <img src="assets/logo.svg" alt="Logo">
           </a>
         </div>
 
-        @if (currentUser$ | async) {
         <nav class="navigation">
           <ul class="nav-links">
             <li>
-              <a
-                routerLink="/dashboard"
-                routerLinkActive="active"
-                class="nav-link"
-              >
+              <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">
                 <div class="nav-icon">
                   <mat-icon>home</mat-icon>
                 </div>
@@ -37,11 +32,7 @@ import { ProfileDialogComponent } from './profile-dialog.component';
               </a>
             </li>
             <li>
-              <a
-                routerLink="/transactions"
-                routerLinkActive="active"
-                class="nav-link"
-              >
+              <a routerLink="/transactions" routerLinkActive="active" class="nav-link">
                 <div class="nav-icon">
                   <mat-icon>account_balance_wallet</mat-icon>
                 </div>
@@ -49,15 +40,19 @@ import { ProfileDialogComponent } from './profile-dialog.component';
               </a>
             </li>
             <li>
-              <a
-                routerLink="/reports"
-                routerLinkActive="active"
-                class="nav-link"
-              >
+              <a routerLink="/budgets" routerLinkActive="active" class="nav-link">
                 <div class="nav-icon">
-                  <mat-icon>insights</mat-icon>
+                  <mat-icon>savings</mat-icon>
                 </div>
-                <span class="nav-text">Phân tích</span>
+                <span class="nav-text">Ngân sách</span>
+              </a>
+            </li>
+            <li>
+              <a routerLink="/analytics" routerLinkActive="active" class="nav-link">
+                <div class="nav-icon">
+                  <mat-icon>analytics</mat-icon>
+                </div>
+                <span class="nav-text">Phân tích chi tiêu</span>
               </a>
             </li>
           </ul>
@@ -91,7 +86,6 @@ import { ProfileDialogComponent } from './profile-dialog.component';
             </button>
           </mat-menu>
         </div>
-        }
       </div>
     </header>
   `,

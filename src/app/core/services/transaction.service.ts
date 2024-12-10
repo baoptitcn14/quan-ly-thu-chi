@@ -23,6 +23,7 @@ export interface Transaction {
   amount: number;
   type: 'income' | 'expense';
   category: string;
+  categoryName: string;
   description: string;
   date: Date | Timestamp;
 }

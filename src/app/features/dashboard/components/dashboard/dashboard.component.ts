@@ -12,6 +12,7 @@ import {
 import { BudgetService } from '../../../../core/services/budget.service';
 import { ChartConfiguration } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
+import { CategoryService, Category } from '../../../../core/services/category.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -245,6 +246,7 @@ export class DashboardComponent implements OnInit {
   balance = 0;
   recentTransactions: Transaction[] = [];
   displayedColumns = ['date', 'type', 'category', 'amount'];
+  categories: Category[] = [];
 
   // Cấu hình cho biểu đồ cột
   barChartOptions: ChartConfiguration['options'] = {
@@ -292,11 +294,15 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     private transactionService: TransactionService,
-    private budgetService: BudgetService
+    private budgetService: BudgetService,
+    private categoryService: CategoryService
   ) {}
 
   ngOnInit() {
     this.loadTransactions();
+    this.categoryService.getCategories().subscribe(categories => {
+      this.categories = categories;
+    });
   }
 
   private loadTransactions() {
@@ -315,7 +321,7 @@ export class DashboardComponent implements OnInit {
       // Lấy 5 giao dịch gần nhất
       this.recentTransactions = transactions.slice(0, 5);
 
-      // Cập nh��t dữ liệu biểu đồ
+      // Cập nhật dữ liệu biểu đồ
       this.updateChartData(transactions);
     });
   }
@@ -419,14 +425,8 @@ export class DashboardComponent implements OnInit {
     return categoryData;
   }
 
-  getCategoryLabel(category: string): string {
-    const categories: { [key: string]: string } = {
-      food: 'Ăn uống',
-      transport: 'Di chuyển',
-      bills: 'Hóa đơn',
-      entertainment: 'Giải trí',
-      other: 'Khác',
-    };
-    return categories[category] || category;
+  getCategoryLabel(categoryId: string): string {
+    const category = this.categories.find(c => c.id === categoryId);
+    return category ? category.name : categoryId;
   }
 }

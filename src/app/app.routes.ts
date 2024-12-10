@@ -29,5 +29,16 @@ export const routes: Routes = [
     loadChildren: () => import('./features/reports/reports.routes')
       .then(m => m.REPORTS_ROUTES),
     canActivate: [AuthGuard]
+  },
+  {
+    path: 'budgets',
+    loadChildren: () => import('./features/budgets/budgets.routes')
+      .then(m => m.BUDGET_ROUTES)
+  },
+  {
+    path: 'analytics',
+    loadChildren: () => import('./features/analytics/analytics.routes')
+      .then(m => m.ANALYTICS_ROUTES),
+    canActivate: [AuthGuard]
   }
 ];
