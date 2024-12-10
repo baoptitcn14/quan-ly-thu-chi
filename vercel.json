@@ -1,16 +1,25 @@
 {
     "version": 2,
-    "routes": [
-        {
-            "handle": "filesystem"
-        },
-        {
-            "src": "/browser/(.*)",
-            "dest": "/browser/$1"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/browser/index.csr.html"
+    "builds": [
+      {
+        "src": "package.json",
+        "use": "@vercel/static-build",
+        "config": {
+          "distDir": "dist/quan-ly-chi-tieu/browser"
         }
+      }
+    ],
+    "routes": [
+      {
+        "src": "/assets/(.*)",
+        "dest": "/assets/$1"
+      },
+      {
+        "handle": "filesystem"
+      },
+      {
+        "src": "/(.*)",
+        "dest": "/index.csr.html"
+      }
     ]
-}
+  }
