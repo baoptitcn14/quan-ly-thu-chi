@@ -5,7 +5,7 @@
         "src": "package.json",
         "use": "@vercel/static-build",
         "config": {
-          "distDir": "dist/quan-ly-chi-tieu/browser"
+          "distDir": "dist/quan-ly-thu-chi/browser"
         }
       }
     ],
