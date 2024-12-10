@@ -1,16 +1,23 @@
 {
     "version": 2,
+    "builds": [
+        {
+            "src": "dist/quan-ly-chi-tieu/browser/**",
+            "use": "@vercel/static"
+        }
+    ],
     "routes": [
         {
-            "handle": "filesystem"
+            "src": "/assets/(.*)",
+            "dest": "/browser/assets/$1"
         },
         {
-            "src": "/browser/(.*)",
-            "dest": "/browser/$1"
+            "src": "/favicon.ico",
+            "dest": "/browser/favicon.ico"
         },
         {
             "src": "/(.*)",
-            "dest": "/browser/index.html"
+            "dest": "/browser/index.csr.html"
         }
     ]
 }
