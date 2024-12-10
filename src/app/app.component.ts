@@ -9,10 +9,9 @@ import { Router } from '@angular/router';
   standalone: true,
   imports: [RouterOutlet, HeaderComponent],
   template: `
-    <app-header></app-header>
-    <main>
+    <app-header>
       <router-outlet></router-outlet>
-    </main>
+    </app-header>
   `,
   styles: [
     `

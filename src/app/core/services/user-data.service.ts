@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
-import { Firestore, collection, addDoc, query, where, getDocs, doc, writeBatch } from '@angular/fire/firestore';
+import { Firestore, collection, addDoc, query, where, getDocs, doc, writeBatch, collectionData } from '@angular/fire/firestore';
 import { Category } from './category.service';
+import { Observable, of } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { User } from '../models/user.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -70,5 +73,19 @@ export class UserDataService {
       createdAt: new Date(),
       updatedAt: new Date()
     });
+  }
+
+  searchUsers(query: string): Observable<User[]> {
+    if (!query?.trim()) return of([]);
+    
+    const usersRef = collection(this.firestore, 'users');
+    const searchQuery = query.toLowerCase().trim();
+    
+    return collectionData(usersRef, { idField: 'uid' }).pipe(
+      map((users: any) => users.filter((user: any) => 
+        user.email?.toLowerCase().includes(searchQuery) || 
+        user.displayName?.toLowerCase().includes(searchQuery)
+      ).slice(0, 5))
+    );
   }
 } 

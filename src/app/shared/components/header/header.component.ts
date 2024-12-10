@@ -1,286 +1,412 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { AuthService } from '../../../core/services/auth.service';
 import { User } from '../../../core/models/user.interface';
 import { Observable } from 'rxjs';
 import { ProfileDialogComponent } from './profile-dialog.component';
+import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
 
 @Component({
   selector: 'app-header',
   template: `
-    <header class="header">
-      <div class="header-container">
-        <div class="logo">
-          <a routerLink="/">
-            <img src="assets/logo.svg" alt="Logo">
-          </a>
+    <div class="app-container">
+      <!-- Sidebar -->
+      <aside class="sidebar" [class.expanded]="isMenuOpen">
+        <div class="sidebar-header">
+          <div class="logo">
+            <img src="assets/logo.svg" alt="Logo" />
+          </div>
         </div>
 
-        <nav class="navigation">
+        <nav class="sidebar-nav">
           <ul class="nav-links">
+            <!-- Trang chủ -->
             <li>
-              <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">
-                <div class="nav-icon">
-                  <mat-icon>home</mat-icon>
-                </div>
-                <span class="nav-text">Trang chủ</span>
+              <a
+                routerLink="/dashboard"
+                routerLinkActive="active"
+                class="nav-link"
+                (click)="closeMenuOnMobile()"
+              >
+                <mat-icon>home</mat-icon>
+                <span>Trang chủ</span>
               </a>
             </li>
-            <li>
-              <a routerLink="/transactions" routerLinkActive="active" class="nav-link">
-                <div class="nav-icon">
-                  <mat-icon>account_balance_wallet</mat-icon>
-                </div>
-                <span class="nav-text">Quản lý chi tiêu</span>
-              </a>
-            </li>
-            <li>
-              <a routerLink="/budgets" routerLinkActive="active" class="nav-link">
-                <div class="nav-icon">
+
+            <!-- Quản lý thu chi -->
+            <li class="nav-group">
+              <div class="nav-group-header">Quản lý thu chi</div>
+              <div class="nav-group-items">
+                <a
+                  routerLink="/transactions"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeMenuOnMobile()"
+                >
+                  <mat-icon>receipt</mat-icon>
+                  <span>Giao dịch</span>
+                </a>
+                <a
+                  routerLink="/budgets"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeMenuOnMobile()"
+                >
                   <mat-icon>savings</mat-icon>
-                </div>
-                <span class="nav-text">Ngân sách</span>
-              </a>
+                  <span>Ngân sách</span>
+                </a>
+                <a
+                  routerLink="/saving-goals"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeMenuOnMobile()"
+                >
+                  <mat-icon>monetization_on</mat-icon>
+                  <span>Mục tiêu tiết kiệm</span>
+                </a>
+              </div>
             </li>
-            <li>
-              <a routerLink="/analytics" routerLinkActive="active" class="nav-link">
-                <div class="nav-icon">
+
+            <!-- Báo cáo & Phân tích -->
+            <li class="nav-group">
+              <div class="nav-group-header">Báo cáo & Phân tích</div>
+              <div class="nav-group-items">
+                <a
+                  routerLink="/analytics"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeMenuOnMobile()"
+                >
                   <mat-icon>analytics</mat-icon>
-                </div>
-                <span class="nav-text">Phân tích chi tiêu</span>
+                  <span>Phân tích chi tiêu</span>
+                </a>
+                <a
+                  routerLink="/reports"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeMenuOnMobile()"
+                >
+                  <mat-icon>assessment</mat-icon>
+                  <span>Báo cáo tài chính</span>
+                </a>
+              </div>
+            </li>
+
+            <!-- Nhóm chi tiêu -->
+            <li>
+              <a
+                routerLink="/groups"
+                routerLinkActive="active"
+                class="nav-link"
+                (click)="closeMenuOnMobile()"
+              >
+                <mat-icon>groups</mat-icon>
+                <span>Nhóm chi tiêu</span>
               </a>
             </li>
           </ul>
         </nav>
+      </aside>
 
-        <!-- User Profile Menu -->
-        <div class="user-menu">
-          <button
-            mat-button
-            [matMenuTriggerFor]="userMenu"
-            class="profile-button"
-          >
-            <img
-              [src]="
-                (currentUser$ | async)?.photoURL || 'assets/default-avatar.svg'
-              "
-              alt="Avatar"
-              class="avatar"
-            />
-            <mat-icon>arrow_drop_down</mat-icon>
+      <!-- Main Content Area -->
+      <div class="main-area">
+        <!-- Header -->
+        <header class="header">
+          <button class="menu-toggle" mat-icon-button (click)="toggleMenu()">
+            <mat-icon>menu</mat-icon>
           </button>
 
-          <mat-menu #userMenu="matMenu">
-            <button mat-menu-item (click)="openProfileDialog()">
-              <mat-icon>account_circle</mat-icon>
-              <span>Thông tin cá nhân</span>
+          <div class="user-menu">
+            <app-notification-bell></app-notification-bell>
+            <button
+              mat-button
+              [matMenuTriggerFor]="userMenu"
+              class="profile-button"
+            >
+              <img
+                [src]="
+                  (currentUser$ | async)?.photoURL ||
+                  'assets/default-avatar.svg'
+                "
+                alt="Avatar"
+                class="avatar"
+              />
+              <mat-icon>arrow_drop_down</mat-icon>
             </button>
-            <button mat-menu-item (click)="logout()">
-              <mat-icon>exit_to_app</mat-icon>
-              <span>Đăng xuất</span>
-            </button>
-          </mat-menu>
-        </div>
+
+            <mat-menu #userMenu="matMenu">
+              <button mat-menu-item (click)="openProfileDialog()">
+                <mat-icon>account_circle</mat-icon>
+                <span>Thông tin cá nhân</span>
+              </button>
+              <button mat-menu-item (click)="logout()">
+                <mat-icon>exit_to_app</mat-icon>
+                <span>Đăng xuất</span>
+              </button>
+            </mat-menu>
+          </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+          <ng-content></ng-content>
+        </main>
       </div>
-    </header>
+    </div>
   `,
   styles: [
     `
-      .header {
-        width: 100%;
-        background: #fff;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        position: fixed;
-        top: 0;
-        left: 0;
+      .app-container {
+        display: flex;
+        min-height: 100vh;
+        background: #f8fafc;
+      }
+
+      .sidebar {
+        width: 280px;
+        background: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+        display: flex;
+        flex-direction: column;
         z-index: 1000;
-      }
+        height: 100vh;
+        position: fixed;
+        left: 0;
+        transition: all 0.3s ease;
 
-      .header-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0.8rem 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .logo img {
-        height: 40px;
-        transition: transform 0.2s ease;
-      }
-
-      .logo img:hover {
-        transform: scale(1.05);
-      }
-
-      .navigation {
-        flex: 1;
-        margin-left: 2rem;
-        justify-items: flex-end;
-      }
-
-      .nav-links {
-        display: flex;
-        gap: 1rem;
-        list-style: none;
-        margin: 0;
-        padding: 0;
-      }
-
-      .nav-link {
-        display: flex;
-        align-items: center;
-        padding: 0.5rem 1rem;
-        color: #666;
-        text-decoration: none;
-        border-radius: 8px;
-        transition: all 0.2s ease;
-      }
-
-      .nav-link:hover {
-        background: rgba(0, 0, 0, 0.04);
-        color: #2196f3;
-      }
-
-      .nav-link.active {
-        background: #e3f2fd;
-        color: #1976d2;
-      }
-
-      .nav-icon {
-        display: flex;
-        align-items: center;
-        margin-right: 0.5rem;
-      }
-
-      .nav-icon mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-
-      .nav-text {
-        font-weight: 500;
-        font-size: 0.9rem;
-      }
-
-      .menu-toggle {
-        display: none;
-        padding: 0.5rem;
-        color: #666;
-        border-radius: 50%;
-        transition: background 0.2s ease;
-      }
-
-      .menu-toggle:hover {
-        background: rgba(0, 0, 0, 0.04);
-      }
-
-      /* Mobile styles */
-      @media (max-width: 768px) {
-        .header-container {
-          padding: 0.8rem 1rem;
-        }
-
-        .menu-toggle {
+        .sidebar-header {
+          padding: 1.5rem;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: none;
-          border: none;
-          cursor: pointer;
+          border-bottom: 1px solid #e2e8f0;
+
+          .logo {
+            height: 40px;
+            img {
+              height: 100%;
+              width: auto;
+            }
+          }
         }
 
-        .navigation {
-          position: fixed;
-          top: 60px;
-          left: 0;
-          width: 100%;
-          height: calc(100vh - 60px);
-          background: #fff;
-          margin: 0;
-          padding: 1rem;
-          transform: translateX(-100%);
-          transition: transform 0.3s ease;
-          box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-          justify-items: initial;
-        }
+        .sidebar-nav {
+          flex: 1;
+          overflow-y: auto;
+          padding: 1rem 0;
 
-        .navigation.active {
-          transform: translateX(0);
-        }
+          .nav-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
 
-        .nav-links {
-          flex-direction: column;
-          gap: 0.5rem;
-        }
+            .nav-group {
+              margin: 1.5rem 0;
 
-        .nav-link {
-          padding: 0.8rem 1rem;
-        }
+              .nav-group-header {
+                padding: 0 1.5rem;
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: #64748b;
+                text-transform: uppercase;
+                margin-bottom: 0.5rem;
+              }
 
-        .nav-text {
-          font-size: 1rem;
+              .nav-group-items {
+                padding: 0.25rem 0;
+              }
+            }
+
+            .nav-link {
+              display: flex;
+              align-items: center;
+              padding: 0.75rem 1.5rem;
+              color: #475569;
+              text-decoration: none;
+              transition: all 0.2s ease;
+              gap: 0.75rem;
+              margin: 0.125rem 0.75rem;
+              border-radius: 8px;
+
+              mat-icon {
+                width: 20px;
+                height: 20px;
+                font-size: 20px;
+              }
+
+              span {
+                font-size: 0.875rem;
+                font-weight: 500;
+              }
+
+              &:hover {
+                background: #f1f5f9;
+                color: #3b82f6;
+              }
+
+              &.active {
+                background: #e0f2fe;
+                color: #0284c7;
+                font-weight: 600;
+              }
+            }
+          }
         }
       }
 
-      /* Tablet styles */
-      @media (min-width: 769px) and (max-width: 1024px) {
-        .header-container {
-          padding: 0.8rem 1.5rem;
+      .header {
+        height: 64px;
+        background: #fff;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 1.5rem;
+        position: sticky;
+        top: 0;
+        z-index: 900;
+
+        .menu-toggle {
+          display: none;
         }
 
-        .nav-links {
-          gap: 0.5rem;
-        }
-
-        .nav-link {
-          padding: 0.5rem 0.8rem;
-        }
-
-        .nav-text {
-          font-size: 0.85rem;
-        }
-      }
-
-      .user-menu {
-        margin-left: 1rem;
-
-        .profile-button {
+        .user-menu {
+          margin-left: auto;
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          padding: 4px 8px;
+          gap: 16px;
 
-          .avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            object-fit: cover;
+          .profile-button {
+            min-height: 40px;
+            padding: 4px 8px;
+            border-radius: 40px;
+            background: transparent;
+            border: none;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            &:hover {
+              background: #f1f5f9;
+            }
+
+            .avatar {
+              width: 32px;
+              height: 32px;
+              border-radius: 50%;
+              object-fit: cover;
+            }
+
+            mat-icon {
+              color: #64748b;
+              width: 20px;
+              height: 20px;
+              font-size: 20px;
+            }
           }
 
-          .username {
-            max-width: 120px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+          app-notification-bell {
+            margin-right: 8px;
+          }
+        }
+      }
+
+      .main-area {
+        margin-left: 280px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        transition: margin-left 0.3s ease;
+        padding: 1.5rem;
+      }
+
+      ::ng-deep .mat-menu-panel {
+        margin-top: 8px;
+        border-radius: 12px !important;
+        overflow: hidden;
+        min-width: 200px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+
+        .mat-menu-content {
+          padding: 8px !important;
+        }
+
+        .mat-menu-item {
+          border-radius: 8px;
+          margin: 4px 0;
+          height: 44px;
+          line-height: 44px;
+          gap: 12px;
+          color: #334155;
+          font-weight: 500;
+          transition: all 0.2s ease;
+
+          mat-icon {
+            color: #64748b;
+            margin-right: 0;
+          }
+
+          &:hover {
+            background: #f1f5f9;
+            color: #2563eb;
+
+            mat-icon {
+              color: #2563eb;
+            }
           }
         }
       }
 
       @media (max-width: 768px) {
-        .username {
-          display: none;
+        .user-menu {
+          gap: 8px;
+          
+          .profile-button {
+            padding: 4px;
+            
+            mat-icon {
+              display: none;
+            }
+          }
+        }
+      }
+
+      @media (max-width: 1024px) {
+        .sidebar {
+          left: -280px;
+          background: #fff;
+          box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+
+          &.expanded {
+            left: 0;
+          }
         }
 
-        .profile-button {
-          padding: 4px !important;
+        .main-area {
+          margin-left: 0;
+          padding: 1rem;
+        }
+
+        .header {
+          .menu-toggle {
+            display: block;
+            margin-right: 1rem;
+          }
+
+          .user-menu {
+            .profile-button {
+              .username {
+                display: none;
+              }
+            }
+          }
         }
       }
     `,
@@ -293,13 +419,56 @@ import { ProfileDialogComponent } from './profile-dialog.component';
     MatIconModule,
     MatMenuModule,
     MatDialogModule,
+    NotificationBellComponent,
   ],
 })
 export class HeaderComponent {
+  isMenuOpen = false;
   currentUser$: Observable<User | null>;
 
-  constructor(private authService: AuthService, private dialog: MatDialog) {
+  constructor(
+    private authService: AuthService,
+    private dialog: MatDialog,
+    private router: Router
+  ) {
     this.currentUser$ = this.authService.getCurrentUser();
+
+    // Tự động đóng menu khi chuyển route
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.isMenuOpen = false;
+      }
+    });
+  }
+
+  toggleMenu(event?: Event) {
+    if (event) {
+      event.stopPropagation(); // Ngăn sự kiện nổi bọt
+    }
+    this.isMenuOpen = !this.isMenuOpen;
+  }
+
+  closeMenuOnMobile() {
+    if (window.innerWidth <= 1024) {
+      this.isMenuOpen = false;
+    }
+  }
+
+  // Close menu when clicking outside
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const isMenuButton = target.closest('.menu-toggle');
+    const isSidebar = target.closest('.sidebar');
+
+    if (
+      !isMenuButton &&
+      !isSidebar &&
+      this.isMenuOpen &&
+      window.innerWidth <= 1024
+    ) {
+      this.isMenuOpen = false;
+    }
   }
 
   openProfileDialog(): void {

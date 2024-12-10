@@ -40,5 +40,17 @@ export const routes: Routes = [
     loadChildren: () => import('./features/analytics/analytics.routes')
       .then(m => m.ANALYTICS_ROUTES),
     canActivate: [AuthGuard]
+  },
+  {
+    path: 'saving-goals',
+    loadChildren: () => import('./features/saving-goals/saving-goals.routes')
+      .then(m => m.SAVING_GOALS_ROUTES),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'groups',
+    loadChildren: () => import('./features/groups/groups.routes')
+      .then(m => m.GROUP_ROUTES),
+    canActivate: [AuthGuard]
   }
 ];

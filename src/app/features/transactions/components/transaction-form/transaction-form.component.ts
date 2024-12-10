@@ -72,7 +72,7 @@ import { NumberFormatter } from '../../../../shared/utils/number-formatter';
                                 class="delete-button"
                                 (click)="deleteCategory($event, category.id)"
                                 matTooltip="Xóa danh mục">
-                          <mat-icon class="delete-icon">delete</mat-icon>
+                          <mat-icon class="delete-icon">remove_circle</mat-icon>
                         </button>
                       }
                     </div>
