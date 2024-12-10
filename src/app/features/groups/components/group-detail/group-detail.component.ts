@@ -1,4 +1,10 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  HostListener,
+  ViewChild,
+  ElementRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -7,13 +13,20 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { GroupService } from '../../../../core/services/group.service';
-import { Group, GroupExpense, GroupMessage } from '../../../../core/models/group.model';
+import {
+  Group,
+  GroupExpense,
+  GroupMessage,
+} from '../../../../core/models/group.model';
 import { AddExpenseDialogComponent } from '../add-expense-dialog/add-expense-dialog.component';
 import { AddMemberDialogComponent } from '../add-member-dialog/add-member-dialog.component';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TimestampPipe } from '../../../../core/pipes/timestamp.pipe';
 import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { Category, CategoryService } from '../../../../core/services/category.service';
+import {
+  Category,
+  CategoryService,
+} from '../../../../core/services/category.service';
 import { firstValueFrom } from 'rxjs';
 import { GroupMessageService } from '../../../../core/services/group-message.service';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -22,6 +35,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { switchMap } from 'rxjs/operators';
 import { NotificationService } from '../../../../core/services/notification.service';
+import { ExpenseListComponent } from '../expense-list/expense-list.component';
+import { MatSelectModule } from '@angular/material/select';
 
 @Component({
   selector: 'app-group-detail',
@@ -34,31 +49,37 @@ import { NotificationService } from '../../../../core/services/notification.serv
     MatIconModule,
     MatTabsModule,
     MatDialogModule,
-    TimestampPipe,
     ReactiveFormsModule,
     MatFormFieldModule,
-    MatInputModule
+    MatInputModule,
+    MatSelectModule,
+    ExpenseListComponent,
+    TimestampPipe,
   ],
   template: `
     <div class="group-detail" *ngIf="group">
       <div class="header-section">
         <div class="group-info">
           <div class="group-title">
-            <h2>{{group.name}}</h2>
+            <h2>{{ group.name }}</h2>
             <span class="member-count">
               <mat-icon>group</mat-icon>
-              {{group.members.length}} thành viên
+              {{ group.members.length }} thành viên
             </span>
           </div>
-          <p class="description">{{group.description}}</p>
+          <p class="description">{{ group.description }}</p>
           <div class="group-stats">
             <div class="stat-item">
               <span class="label">Tổng chi tiêu</span>
-              <span class="value">{{getTotalExpenses() | number:'1.0-0'}}đ</span>
+              <span class="value"
+                >{{ getTotalExpenses() | number : '1.0-0' }}đ</span
+              >
             </div>
             <div class="stat-item">
               <span class="label">Chi tiêu tháng này</span>
-              <span class="value">{{getMonthlyExpenses() | number:'1.0-0'}}đ</span>
+              <span class="value"
+                >{{ getMonthlyExpenses() | number : '1.0-0' }}đ</span
+              >
             </div>
           </div>
         </div>
@@ -67,214 +88,196 @@ import { NotificationService } from '../../../../core/services/notification.serv
             <mat-icon>add</mat-icon>
             Thêm chi tiêu
           </button>
-          <button mat-stroked-button 
-                  *ngIf="isAdmin"
-                  (click)="addMember()">
+          <button mat-stroked-button *ngIf="isAdmin" (click)="addMember()">
             <mat-icon>person_add</mat-icon>
             Thêm thành viên
           </button>
         </div>
       </div>
 
-      <mat-tab-group animationDuration="200ms" class="content-tabs" mat-align-tabs="center">
-        <!-- Tab Chi tiêu -->
-        <mat-tab>
+      <mat-tab-group
+        animationDuration="200ms"
+        class="content-tabs"
+        mat-align-tabs="center"
+      >
+        <mat-tab label="Chi tiêu">
           <ng-template mat-tab-label>
             <mat-icon class="tab-icon">receipt</mat-icon>
             Chi tiêu
           </ng-template>
-          <div class="tab-content">
-            <div class="expenses-container">
-              <!-- <div class="header">
-                <h3>Chi tiêu nhóm</h3>
-                <button mat-raised-button 
-                        color="primary"
-                        *ngIf="isMember" 
-                        (click)="addExpense()">
-                  <mat-icon>add</mat-icon>
-                  Thêm chi tiêu
-                </button>
-              </div> -->
-
-              @if (expenses.length === 0) {
-                <div class="empty-state">
-                  <mat-icon>receipt_long</mat-icon>
-                  <p>Chưa có chi tiêu nào</p>
-                  <button mat-raised-button color="primary" (click)="addExpense()">
-                    <mat-icon>add</mat-icon>
-                    Thêm chi tiêu đầu tiên
-                  </button>
-                </div>
-              } @else {
-                <div class="expenses-list">
-                  @for (expense of expenses; track expense.id) {
-                    <mat-card class="expense-item">
-                      <div class="expense-header">
-                        <div class="category-badge">
-                          <mat-icon>{{getCategoryIcon(expense.category)}}</mat-icon>
-                          <span>{{getCategoryName(expense.category)}}</span>
-                        </div>
-                        <div class="actions">
-                          @if (isAdmin || expense.paidBy === currentUserId) {
-                            <button mat-icon-button 
-                                    matTooltip="Sửa chi tiêu"
-                                    (click)="editExpense(expense)">
-                              <mat-icon>edit</mat-icon>
-                            </button>
-                            <button mat-icon-button 
-                                    color="warn"
-                                    matTooltip="Xóa chi tiêu"
-                                    (click)="deleteExpense(expense)">
-                              <mat-icon>delete</mat-icon>
-                            </button>
-                          }
-                        </div>
-                      </div>
-
-                      <div class="expense-content">
-                        <h4>{{expense.description}}</h4>
-                        <div class="expense-details">
-                          <div class="amount">
-                            <span class="label" style="margin-right: 10px;">Số tiền:</span>
-                            <span class="value">{{expense.amount | number:'1.0-0'}}đ</span>
-                          </div>
-                          <div class="paid-by">
-                            <span class="label" style="margin-right: 10px;">Người trả:</span>
-                            <span class="value">{{getPaidByName(expense)}}</span>
-                          </div>
-                          <div class="date">
-                            <span class="label" style="margin-right: 10px;">Ngày:</span>
-                            <span class="value">{{expense.date | date:'dd/MM/yyyy'}}</span>
-                          </div>
-                        </div>
-
-                        <div class="split-info">
-                          <h5>Chia cho:</h5>
-                          <div class="split-list">
-                            @for (split of expense.splitBetween; track split.userId) {
-                              <div class="split-item" [class.paid]="split.status === 'paid'">
-                                <span class="name">{{split.displayName}}</span>
-                                <span class="amount">{{split.amount | number:'1.0-0'}}đ</span>
-                                @if (split.status === 'pending') {
-                                  <button mat-icon-button 
-                                          class="remind-btn"
-                                          matTooltip="Nhắc thanh toán"
-                                          (click)="remindPayment(expense, split)">
-                                    <mat-icon>notifications</mat-icon>
-                                  </button>
-                                } @else {
-                                  <mat-icon class="status-icon">check_circle</mat-icon>
-                                }
-                              </div>
-                            }
-                          </div>
-                        </div>
-                      </div>
-                    </mat-card>
-                  }
-                </div>
-              }
-            </div>
+          <div class="tab-content expenses-tab">
+            <app-expense-list
+              [expenses]="expenses"
+              [isAdmin]="isAdmin"
+              [currentUserId]="currentUserId"
+              [group]="group"
+              (onEdit)="editExpense($event)"
+              (onDelete)="deleteExpense($event)"
+            >
+            </app-expense-list>
           </div>
         </mat-tab>
 
-        <!-- Tab Thành viên -->
-        <mat-tab>
+        <mat-tab label="Thành viên">
           <ng-template mat-tab-label>
             <mat-icon class="tab-icon">group</mat-icon>
             Thành viên
           </ng-template>
-          <div class="tab-content">
-            <div class="members-grid">
+          <div class="tab-content members-tab">
+            <div class="members-list">
               @for (member of group.members; track member.userId) {
-                <mat-card class="member-card" [class.admin-card]="member.role === 'admin'">
-                  <div class="member-header">
-                    <img [src]="member.photoURL || 'assets/default-avatar.svg'" 
-                         [alt]="member.displayName"
-                         class="member-avatar">
-                    <div class="member-info">
-                      <h3>{{member.displayName}}</h3>
-                      <span class="role-badge" [class.admin]="member.role === 'admin'">
-                        {{member.role === 'admin' ? 'Quản trị viên' : 'Thành viên'}}
+              <div class="member-item" [class.admin]="member.role === 'admin'">
+                <div class="member-main">
+                  <div class="avatar-wrapper">
+                    <img
+                      [src]="member.photoURL || 'assets/default-avatar.svg'"
+                      [alt]="member.displayName"
+                      class="avatar"
+                    />
+                    <span
+                      class="status-dot"
+                      [class.online]="isOnline(member.userId)"
+                    ></span>
+                  </div>
+
+                  <div class="info">
+                    <div class="name-role">
+                      <h4>{{ member.displayName }}</h4>
+                      @if (member.role === 'admin') {
+                      <span class="role-tag">
+                        <mat-icon>admin_panel_settings</mat-icon>
+                        Admin
                       </span>
+                      }
+                    </div>
+                    <span class="joined-date">
+                      Tham gia
+                      {{
+                        member.joinedAt | TimestampPipe | date : 'dd/MM/yyyy'
+                      }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="member-stats">
+                  <div class="stat-item">
+                    <div class="stat-value">
+                      {{ getMemberExpenses(member.userId) | number : '1.0-0' }}đ
+                    </div>
+                    <div class="stat-label">Đã chi</div>
+                    <div
+                      class="stat-trend"
+                      [class.up]="getMemberExpenses(member.userId) > 0"
+                    >
+                      <mat-icon>trending_up</mat-icon>
+                      +25%
                     </div>
                   </div>
-                  <div class="member-stats">
-                    <div class="stat">
-                      <span class="label">Đã chi</span>
-                      <span class="value">{{getMemberExpenses(member.userId) | number:'1.0-0'}}đ</span>
+
+                  <div class="stat-item">
+                    <div
+                      class="stat-value"
+                      [class.negative]="getMemberBalance(member.userId) < 0"
+                    >
+                      {{ getMemberBalance(member.userId) | number : '1.0-0' }}đ
                     </div>
-                    <div class="stat">
-                      <span class="label">Số dư</span>
-                      <span class="value" [class.negative]="getMemberBalance(member.userId) < 0">
-                        {{getMemberBalance(member.userId) | number:'1.0-0'}}đ
-                      </span>
+                    <div class="stat-label">Số dư</div>
+                    <div
+                      class="stat-trend"
+                      [class.down]="getMemberBalance(member.userId) < 0"
+                    >
+                      <mat-icon>{{
+                        getMemberBalance(member.userId) < 0
+                          ? 'trending_down'
+                          : 'trending_up'
+                      }}</mat-icon>
+                      {{ getMemberBalance(member.userId) < 0 ? '-' : '+' }}15%
                     </div>
                   </div>
-                  <p class="joined-date">
-                    <mat-icon>event</mat-icon>
-                    Tham gia: {{member.joinedAt | TimestampPipe | date:'dd/MM/yyyy'}}
-                  </p>
-                  <div class="member-actions" *ngIf="isAdmin && member.role !== 'admin'">
-                    <button mat-icon-button color="warn" 
-                            (click)="removeMember(member.userId)"
-                            matTooltip="Xóa thành viên">
-                      <mat-icon>person_remove</mat-icon>
-                    </button>
-                  </div>
-                </mat-card>
+                </div>
+
+                @if (isAdmin && member.userId !== currentUserId) {
+                <button
+                  mat-icon-button
+                  class="remove-btn"
+                  color="warn"
+                  matTooltip="Xóa thành viên"
+                  (click)="removeMember(member.userId)"
+                >
+                  <mat-icon>person_remove</mat-icon>
+                </button>
+                }
+              </div>
               }
             </div>
           </div>
         </mat-tab>
 
-        <mat-tab label="Trò chuyện">
-          <div class="chat-container">
-            <div class="messages-list" #messagesList>
-              @for (message of messages$ | async; track message.id) {
-                <div class="message-item" [class.own-message]="message.userId === currentUserId">
-                  <img [src]="message.photoURL || 'assets/default-avatar.svg'" 
-                       [alt]="message.displayName"
-                       class="avatar">
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">chat</mat-icon>
+            Trò chuyện
+          </ng-template>
+          <div class="tab-content chat-tab">
+            <div class="messages-container">
+              <div class="messages-list" #messagesList>
+                @for (message of messages$ | async; track message.id) {
+                <div
+                  class="message-item"
+                  [class.own-message]="message.userId === currentUserId"
+                >
+                  <img
+                    [src]="message.photoURL || 'assets/default-avatar.svg'"
+                    [alt]="message.displayName"
+                    class="avatar"
+                  />
                   <div class="message-content">
                     <div class="message-header">
-                      <span class="sender-name">{{message.displayName}}</span>
-                      <span class="time">{{message.createdAt | TimestampPipe | date:'HH:mm'}}</span>
+                      <span class="sender">{{ message.displayName }}</span>
+                      <span class="time">{{
+                        message.createdAt | TimestampPipe | date : 'HH:mm'
+                      }}</span>
                     </div>
-                    <div class="message-text">{{message.content}}</div>
+                    <div class="message-text">{{ message.content }}</div>
                   </div>
                 </div>
-              }
-            </div>
+                }
+              </div>
 
-            <div class="message-input">
-              <mat-form-field appearance="outline">
-                <input matInput
-                       [formControl]="messageCtrl"
-                       placeholder="Nhập tin nhắn..."
-                       (keyup.enter)="sendMessage()">
-                <div class="input-actions" matSuffix>
-                  <button mat-icon-button
-                          type="button"
-                          (click)="toggleEmojiPicker()">
-                    <mat-icon>sentiment_satisfied_alt</mat-icon>
-                  </button>
-                  <button mat-icon-button
-                          [disabled]="!messageCtrl.value"
-                          (click)="sendMessage()">
-                    <mat-icon>send</mat-icon>
-                  </button>
-                </div>
-              </mat-form-field>
-              
-              <div class="emoji-picker" *ngIf="showEmojiPicker">
-                <div class="emoji-list">
-                  @for (emoji of emojis; track emoji) {
-                    <button mat-icon-button (click)="addEmoji(emoji)">
-                      {{emoji}}
+              <div class="message-input">
+                <mat-form-field appearance="outline">
+                  <input
+                    matInput
+                    [formControl]="messageCtrl"
+                    placeholder="Nhập tin nhắn..."
+                    (keyup.enter)="sendMessage()"
+                  />
+                  <div class="input-actions" matSuffix>
+                    <button mat-icon-button (click)="toggleEmojiPicker()">
+                      <mat-icon>sentiment_satisfied_alt</mat-icon>
                     </button>
-                  }
+                    <button
+                      mat-icon-button
+                      color="primary"
+                      [disabled]="!messageCtrl.value"
+                      (click)="sendMessage()"
+                    >
+                      <mat-icon>send</mat-icon>
+                    </button>
+                  </div>
+                </mat-form-field>
+
+                @if (showEmojiPicker) {
+                <div class="emoji-picker">
+                  <div class="emoji-list">
+                    @for (emoji of emojis; track emoji) {
+                    <button mat-button (click)="addEmoji(emoji)">
+                      {{ emoji }}
+                    </button>
+                    }
+                  </div>
                 </div>
+                }
               </div>
             </div>
           </div>
@@ -282,733 +285,457 @@ import { NotificationService } from '../../../../core/services/notification.serv
       </mat-tab-group>
     </div>
   `,
-  styles: [`
-    .group-detail {
-      padding: 2rem;
-      background: #f8fafc;
-      min-height: calc(100vh - 64px);
-    }
-
-    .header-section {
-      background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
-      padding: 2rem;
-      border-radius: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-      margin-bottom: 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      border: 1px solid rgba(0,0,0,0.05);
-
-      .group-info {
-        .group-title {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          margin-bottom: 1rem;
-
-          h2 {
-            margin: 0;
-            font-size: 1.75rem;
-            color: #1e293b;
-            font-weight: 600;
-          }
-
-          .member-count {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: #f1f5f9;
-            border-radius: 20px;
-            color: #64748b;
-            font-size: 0.875rem;
-
-            mat-icon {
-              font-size: 18px;
-              width: 18px;
-              height: 18px;
-            }
-          }
-        }
-
-        .description {
-          margin: 0 0 1.5rem;
-          color: #64748b;
-          font-size: 1rem;
-          line-height: 1.5;
-        }
-
-        .group-stats {
-          display: flex;
-          gap: 2rem;
-
-          .stat-item {
-            background: white;
-            padding: 1rem 1.5rem;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-
-            .label {
-              display: block;
-              color: #64748b;
-              font-size: 0.875rem;
-              margin-bottom: 0.5rem;
-            }
-
-            .value {
-              color: #1e293b;
-              font-size: 1.25rem;
-              font-weight: 600;
-            }
-          }
-        }
-      }
-
-      .actions {
-        display: flex;
-        gap: 1rem;
-
-        button {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 0 1.5rem;
-          height: 44px;
-          border-radius: 10px;
-          width: 100%;
-          
-          mat-icon {
-            margin-right: 0;
-          }
-
-          &[color="primary"] {
-            background: #2563eb;
-            &:hover {
-              background: #1d4ed8;
-            }
-          }
-        }
-      }
-    }
-
-    .content-tabs {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-      overflow: hidden;
-      
-      ::ng-deep {
-        .mat-mdc-tab-header {
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .mat-mdc-tab {
-          height: 64px;
-        }
-
-        .tab-icon {
-          margin-right: 0.5rem;
-        }
-      }
-      
-      .tab-content {
-        padding: 2rem;
-      }
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 3rem;
-      color: #64748b;
-
-      mat-icon {
-        font-size: 24px;
-        width: 24px;
-        height: 24px;
-      }
-
-      p {
-        margin-bottom: 1.5rem;
-        font-size: 1.1rem;
-      }
-    }
-
-    .expenses-grid {
-      display: grid;
-      gap: 1.5rem;
-      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-
-      .expense-card {
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        
-        mat-card-header {
-          padding: 1rem 1rem 0;
-          
-          mat-icon {
-            color: #3b82f6;
-            background: #eff6ff;
-            padding: 8px;
-            border-radius: 8px;
-          }
-        }
-
-        .expense-info {
-          margin: 1rem 0;
-          
-          .category-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            background: #f1f5f9;
-            border-radius: 20px;
-            margin-bottom: 1rem;
-            
-            mat-icon {
-              font-size: 18px;
-              width: 18px;
-              height: 18px;
-              color: #3b82f6;
-            }
-
-            span {
-              font-size: 0.875rem;
-              font-weight: 500;
-              color: #1e293b;
-            }
-          }
-
-          .details {
-            .amount, .paid-by {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 0.5rem;
-              
-              .label {
-                color: #64748b;
-              }
-              
-              .value {
-                font-weight: 500;
-                color: #1e293b;
-              }
-            }
-          }
-        }
-
-        .split-details {
-          h4 {
-            margin: 0 0 1rem;
-            color: #1e293b;
-            font-size: 1rem;
-          }
-
-          .split-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-
-            .split-item {
-              display: flex;
-              align-items: center;
-              padding: 0.75rem;
-              background: #f8fafc;
-              border-radius: 8px;
-              
-              &.paid {
-                background: #f0fdf4;
-              }
-
-              .name {
-                flex: 1;
-                font-weight: 500;
-              }
-
-              .amount {
-                margin: 0 1rem;
-                color: #64748b;
-              }
-
-              .status-icon {
-                color: #22c55e;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    .members-grid {
-      display: grid;
-      gap: 1.5rem;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-
-      .member-card {
-        border-radius: 16px;
-        border: 1px solid #e2e8f0;
-        padding: 1.5rem;
-        transition: all 0.2s ease;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0,0,0,0.05);
-        }
-
-        &.admin-card {
-          background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
-          border-color: #bfdbfe;
-        }
-
-        .member-header {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          margin-bottom: 1.5rem;
-
-          .member-avatar {
-            width: 56px;
-            height: 56px;
-            border-radius: 16px;
-            object-fit: cover;
-            border: 2px solid white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-          }
-
-          .member-info {
-            h3 {
-              margin: 0 0 0.5rem;
-              font-size: 1.1rem;
-              color: #1e293b;
-              font-weight: 600;
-            }
-          }
-        }
-
-        .member-stats {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1rem;
-          margin-bottom: 1.5rem;
-
-          .stat {
-            background: rgba(255,255,255,0.8);
-            padding: 1rem;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-
-            .label {
-              display: block;
-              color: #64748b;
-              font-size: 0.875rem;
-              margin-bottom: 0.5rem;
-            }
-
-            .value {
-              color: #1e293b;
-              font-size: 1.1rem;
-              font-weight: 600;
-
-              &.negative {
-                color: #ef4444;
-              }
-            }
-          }
-        }
-
-        .joined-date {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          margin: 0;
-          color: #64748b;
-          font-size: 0.875rem;
-
-          mat-icon {
-            font-size: 16px;
-            width: 16px;
-            height: 16px;
-          }
-        }
-
-        .role-badge {
-          display: inline-block;
-          padding: 0.25rem 0.75rem;
-          border-radius: 20px;
-          font-size: 0.75rem;
-          background: #f1f5f9;
-          color: #64748b;
-
-          &.admin {
-            background: #eff6ff;
-            color: #2563eb;
-            font-weight: 500;
-          }
-        }
-      }
-    }
-
-    .member-actions {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-    }
-
-    @media (max-width: 768px) {
+  styles: [
+    `
       .group-detail {
-        padding: 1rem;
-      }
-
-      .header-section {
-        flex-direction: column;
-        gap: 1.5rem;
-        
-        .group-info {
-          .group-stats {
-            flex-direction: column;
-            gap: 1rem;
-          }
-        }
-        
-        .actions {
-          width: 100%;
-          flex-direction: column;
-        }
-      }
-
-      .members-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .chat-container {
-      height: calc(100vh - 300px);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .messages-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column-reverse;
-    }
-
-    .message-item {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 1rem;
-      
-      &.own-message {
-        flex-direction: row-reverse;
-        
-        .message-content {
-          background: #e3f2fd;
-        }
-      }
-
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-      }
-
-      .message-content {
-        background: #f1f5f9;
-        padding: 0.75rem;
+        background: #fff;
         border-radius: 12px;
-        max-width: 70%;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
-        .message-header {
-          display: flex;
-          gap: 8px;
-          margin-bottom: 4px;
+        .header-section {
+          padding: 1rem;
+          background: linear-gradient(135deg, #e0f2fe, #f0f9ff);
+          border-radius: 12px 12px 0 0;
 
-          .sender-name {
-            font-weight: 500;
-            color: #1e293b;
+          @media (min-width: 768px) {
+            padding: 2rem;
           }
 
-          .time {
-            color: #64748b;
-            font-size: 0.875rem;
-          }
-        }
-
-        .message-text {
-          color: #334155;
-          white-space: pre-wrap;
-          word-break: break-word;
-        }
-      }
-    }
-
-    .message-input {
-      position: relative;
-      padding: 1rem;
-      background: white;
-      border-top: 1px solid #e2e8f0;
-
-      mat-form-field {
-        width: 100%;
-      }
-
-      .input-actions {
-        display: flex;
-        gap: 4px;
-      }
-    }
-
-    .emoji-picker {
-      position: absolute;
-      bottom: 100%;
-      left: 0;
-      right: 0;
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-      padding: 1rem;
-
-      .emoji-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
-        gap: 8px;
-        max-height: 200px;
-        overflow-y: auto;
-
-        button {
-          font-size: 1.25rem;
-          padding: 8px;
-          min-width: 40px;
-          height: 40px;
-          line-height: 1;
-        }
-      }
-    }
-
-    .expenses-container {
-      padding: 1.5rem;
-
-      .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-
-        h3 {
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: #1e293b;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-
-          mat-icon {
-            color: #3b82f6;
-          }
-        }
-      }
-
-      .expenses-list {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 1.5rem;
-
-        @media (max-width: 1200px) {
-          grid-template-columns: repeat(2, 1fr);
-        }
-
-        @media (max-width: 768px) {
-          grid-template-columns: 1fr;
-        }
-
-        .expense-item {
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-          border-radius: 16px;
-          border: 1px solid #e2e8f0;
-          background: white;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-          transition: all 0.3s ease;
-          overflow: hidden;
-
-          &:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.15);
-            border-color: #cbd5e1;
-          }
-
-          .expense-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.25rem;
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-
-            .category-badge {
-              display: inline-flex;
+          .group-info {
+            .group-title {
+              display: flex;
               align-items: center;
-              gap: 8px;
-              padding: 6px 12px;
-              background: white;
-              border-radius: 20px;
-              border: 1px solid #e2e8f0;
-              
-              mat-icon {
-                font-size: 18px;
-                width: 18px;
-                height: 18px;
-                color: #3b82f6;
-              }
-
-              span {
-                font-size: 0.875rem;
-                font-weight: 500;
-                color: #1e293b;
-              }
-            }
-
-            button {
-              opacity: 0;
-              transform: translateX(10px);
-              transition: all 0.2s ease;
-            }
-          }
-
-          &:hover .expense-header button {
-            opacity: 1;
-            transform: translateX(0);
-          }
-
-          .expense-content {
-            flex: 1;
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1.25rem;
-
-            h4 {
-              margin: 0;
-              font-size: 1.125rem;
-              font-weight: 600;
-              color: #1e293b;
-              line-height: 1.4;
-            }
-
-            .expense-details {
-              display: grid;
               gap: 1rem;
-              padding: 1rem;
-              background: #f8fafc;
-              border-radius: 12px;
+              margin-bottom: 1rem;
 
-              .label {
-                color: #64748b;
-                font-size: 0.875rem;
-                font-weight: 500;
+              h2 {
+                margin: 0;
+                font-size: 1.75rem;
+                color: #0f172a;
               }
 
-              .value {
-                font-size: 1rem;
-                font-weight: 600;
-                color: #1e293b;
-              }
-
-              .amount .value {
-                color: #ef4444;
-                font-size: 1.25rem;
-              }
-            }
-
-            .split-info {
-              margin-top: auto;
-
-              h5 {
-                font-size: 0.875rem;
-                font-weight: 600;
-                color: #64748b;
-                margin: 0 0 0.75rem;
+              .member-count {
                 display: flex;
                 align-items: center;
                 gap: 0.5rem;
+                padding: 0.5rem 1rem;
+                background: rgba(255, 255, 255, 0.8);
+                border-radius: 20px;
+                font-size: 0.875rem;
+                color: #64748b;
+              }
+            }
 
-                mat-icon {
-                  font-size: 16px;
-                  width: 16px;
-                  height: 16px;
+            .description {
+              color: #475569;
+              margin-bottom: 1.5rem;
+            }
+
+            .group-stats {
+              display: grid;
+              grid-template-columns: 1fr;
+              gap: 1rem;
+
+              @media (min-width: 768px) {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+              }
+
+              .stat-item {
+                background: white;
+                padding: 1.5rem;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+                .label {
+                  display: block;
+                  font-size: 0.875rem;
+                  color: #64748b;
+                  margin-bottom: 0.5rem;
+                }
+
+                .value {
+                  font-size: 1.5rem;
+                  font-weight: 600;
+                  color: #0f172a;
+                }
+              }
+            }
+          }
+
+          .actions {
+            margin-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+
+            @media (min-width: 768px) {
+              flex-direction: row;
+            }
+
+            button {
+              padding: 0.75rem 1.5rem;
+              border-radius: 8px;
+
+              mat-icon {
+                margin-right: 0.5rem;
+              }
+            }
+          }
+        }
+
+        .content-tabs {
+          .expenses-tab {
+            .search-filter {
+              background: #f8fafc;
+              padding: 1.5rem;
+              border-radius: 8px;
+              margin-bottom: 2rem;
+            }
+
+            app-expense-list {
+              margin-top: 1.5rem;
+            }
+          }
+
+          .members-tab {
+            padding: 2rem;
+
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 2rem;
+
+              .title-section {
+                h3 {
+                  font-size: 1.75rem;
+                  font-weight: 700;
+                  color: #0f172a;
+                  margin: 0 0 0.5rem;
+                }
+
+                .member-count {
+                  color: #64748b;
+                  font-size: 0.875rem;
                 }
               }
 
-              .split-list {
-                display: grid;
-                gap: 0.75rem;
-                max-height: 180px;
-                overflow-y: auto;
-                padding-right: 4px;
+              button {
+                gap: 0.5rem;
+                padding: 0 1.5rem;
+                height: 42px;
+                border-radius: 8px;
+              }
+            }
 
-                &::-webkit-scrollbar {
-                  width: 4px;
+            .members-list {
+              display: grid;
+              grid-template-columns: 1fr;
+              gap: 1rem;
+
+              @media (min-width: 768px) {
+                grid-template-columns: repeat(2, 1fr);
+              }
+
+              .member-item {
+                background: white;
+                border-radius: 16px;
+                padding: 1rem;
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                position: relative;
+                border: 1px solid #e2e8f0;
+                transition: all 0.3s ease;
+
+                @media (min-width: 768px) {
+                  flex-direction: row;
+                  padding: 1.5rem;
+                  gap: 2rem;
                 }
 
-                &::-webkit-scrollbar-track {
-                  background: #f1f5f9;
-                  border-radius: 2px;
+                &:hover {
+                  border-color: #3b82f6;
+                  transform: translateX(8px);
+                  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+
+                  .remove-btn {
+                    opacity: 1;
+                    transform: translateX(0);
+                  }
                 }
 
-                &::-webkit-scrollbar-thumb {
-                  background: #cbd5e1;
-                  border-radius: 2px;
+                &.admin {
+                  background: linear-gradient(to right, #f0f9ff, #e0f2fe);
+                  border-left: 4px solid #3b82f6;
                 }
 
-                .split-item {
+                .member-main {
                   display: flex;
                   align-items: center;
-                  gap: 12px;
-                  padding: 10px 12px;
-                  background: white;
-                  border: 1px solid #e2e8f0;
-                  border-radius: 10px;
-                  transition: all 0.2s ease;
+                  gap: 1rem;
+                  flex: 1;
 
-                  &:hover {
-                    border-color: #cbd5e1;
-                    background: #f8fafc;
-                  }
+                  .avatar-wrapper {
+                    position: relative;
 
-                  &.paid {
-                    background: #f0fdf4;
-                    border-color: #86efac;
+                    .avatar {
+                      width: 56px;
+                      height: 56px;
+                      border-radius: 16px;
+                      object-fit: cover;
+                    }
 
-                    .status-icon {
-                      color: #22c55e;
+                    .status-dot {
+                      position: absolute;
+                      bottom: -2px;
+                      right: -2px;
+                      width: 12px;
+                      height: 12px;
+                      border-radius: 50%;
+                      border: 2px solid white;
+                      background: #94a3b8;
+
+                      &.online {
+                        background: #22c55e;
+                      }
                     }
                   }
 
-                  .name {
-                    flex: 1;
-                    font-weight: 500;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
+                  .info {
+                    .name-role {
+                      display: flex;
+                      align-items: center;
+                      gap: 0.75rem;
+                      margin-bottom: 0.25rem;
+
+                      h4 {
+                        margin: 0;
+                        font-size: 1rem;
+                        font-weight: 600;
+                        color: #0f172a;
+                      }
+
+                      .role-tag {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 0.25rem;
+                        padding: 0.25rem 0.75rem;
+                        background: #3b82f6;
+                        color: white;
+                        border-radius: 99px;
+                        font-size: 0.75rem;
+                        font-weight: 500;
+
+                        mat-icon {
+                          font-size: 14px;
+                          width: 14px;
+                          height: 14px;
+                        }
+                      }
+                    }
+
+                    .joined-date {
+                      font-size: 0.875rem;
+                      color: #64748b;
+                    }
+                  }
+                }
+
+                .member-stats {
+                  display: flex;
+                  gap: 2rem;
+                  padding: 0;
+                  border-left: none;
+                  gap: 1rem;
+
+                  @media (min-width: 768px) {
+                    padding: 0 2rem;
+                    border-left: 1px solid #e2e8f0;
+                    gap: 2rem;
                   }
 
-                  .amount {
-                    font-weight: 600;
-                    color: #1e293b;
-                    white-space: nowrap;
+                  .stat-item {
+                    text-align: center;
+
+                    .stat-value {
+                      font-size: 1.25rem;
+                      font-weight: 700;
+                      color: #0f172a;
+                      margin-bottom: 0.25rem;
+
+                      &.negative {
+                        color: #ef4444;
+                      }
+                    }
+
+                    .stat-label {
+                      font-size: 0.75rem;
+                      text-transform: uppercase;
+                      letter-spacing: 0.5px;
+                      color: #64748b;
+                      margin-bottom: 0.5rem;
+                    }
+
+                    .stat-trend {
+                      display: inline-flex;
+                      align-items: center;
+                      gap: 0.25rem;
+                      padding: 0.25rem 0.5rem;
+                      border-radius: 6px;
+                      font-size: 0.75rem;
+                      font-weight: 500;
+                      color: #22c55e;
+                      background: #f0fdf4;
+
+                      mat-icon {
+                        font-size: 14px;
+                        width: 14px;
+                        height: 14px;
+                      }
+
+                      &.down {
+                        color: #ef4444;
+                        background: #fef2f2;
+                      }
+                    }
+                  }
+                }
+
+                .remove-btn {
+                  opacity: 0;
+                  transform: translateX(-8px);
+                  transition: all 0.2s ease;
+
+                  &:hover {
+                    background: #fee2e2;
+                  }
+                }
+              }
+            }
+          }
+
+          .chat-tab {
+            height: calc(100vh - 300px);
+            padding: 0;
+
+            .messages-container {
+              height: 100%;
+              display: flex;
+              flex-direction: column;
+
+              .messages-list {
+                flex: 1;
+                overflow-y: auto;
+                padding: 1.5rem;
+                display: flex;
+                flex-direction: column;
+
+                .message-item {
+                  display: flex;
+                  gap: 1rem;
+                  margin-bottom: 1.5rem;
+                  max-width: 80%;
+
+                  &.own-message {
+                    flex-direction: row-reverse;
+                    align-self: flex-end;
+
+                    .message-content {
+                      background: #eff6ff;
+                      border: 1px solid #bfdbfe;
+
+                      .message-header {
+                        flex-direction: row-reverse;
+                      }
+                    }
                   }
 
-                  .status-icon {
-                    font-size: 16px;
-                    width: 16px;
-                    height: 16px;
+                  .avatar {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 12px;
+                    object-fit: cover;
+                  }
+
+                  .message-content {
+                    background: #f8fafc;
+                    padding: 1rem;
+                    border-radius: 12px;
+                    border: 1px solid #e2e8f0;
+
+                    .message-header {
+                      display: flex;
+                      align-items: center;
+                      gap: 0.75rem;
+                      margin-bottom: 0.5rem;
+
+                      .sender {
+                        font-weight: 500;
+                        font-size: 0.875rem;
+                        color: #1e293b;
+                      }
+
+                      .time {
+                        font-size: 0.75rem;
+                        color: #64748b;
+                      }
+                    }
+
+                    .message-text {
+                      color: #334155;
+                      line-height: 1.5;
+                      white-space: pre-wrap;
+                      word-break: break-word;
+                    }
+                  }
+                }
+              }
+
+              .message-input {
+                padding: 1rem;
+                background: white;
+                border-top: 1px solid #e2e8f0;
+                position: relative;
+
+                mat-form-field {
+                  width: 100%;
+                }
+
+                .input-actions {
+                  display: flex;
+                  gap: 0.5rem;
+                }
+
+                .emoji-picker {
+                  position: absolute;
+                  bottom: 100%;
+                  left: 0;
+                  right: 0;
+                  background: white;
+                  border: 1px solid #e2e8f0;
+                  border-radius: 12px;
+                  padding: 1rem;
+                  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+
+                  .emoji-list {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+                    gap: 0.5rem;
+                    max-height: 200px;
+                    overflow-y: auto;
+
+                    button {
+                      min-width: 40px;
+                      height: 40px;
+                      padding: 0;
+                      font-size: 1.25rem;
+
+                      &:hover {
+                        background: #f1f5f9;
+                      }
+                    }
                   }
                 }
               }
@@ -1016,42 +743,74 @@ import { NotificationService } from '../../../../core/services/notification.serv
           }
         }
       }
-    }
-
-    .split-item {
-      .remind-btn {
-        opacity: 0;
-        transition: all 0.2s ease;
-        color: #f59e0b;
-        
-        &:hover {
-          background: #fef3c7;
-        }
-      }
-
-      &:hover .remind-btn {
-        opacity: 1;
-      }
-    }
-  `]
+    `,
+  ],
 })
 export class GroupDetailComponent implements OnInit {
   group: Group | null = null;
   expenses: GroupExpense[] = [];
-  balances: {[key: string]: number} = {};
+  balances: { [key: string]: number } = {};
   categories: Category[] = [];
   messages$!: Observable<GroupMessage[]>;
   messageCtrl = new FormControl('');
-  currentUserId = this.authService.getCurrentUserId();
+  currentUserId = this.authService.getCurrentUserId()!;
   showEmojiPicker = false;
   emojis = [
-    '😀', '😂', '🤣', '😊', '😍', '🥰', '😘', '😎',
-    '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣',
-    '😥', '😮', '🤐', '🤤', '😪', '😫', '🥱', '😴',
-    '😌', '😛', '😜', '😝', '🤤', '👍', '👎', '👌', '���️', '🤞', '🤝', '👊', '✊',
-    '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤',
-    '👋', '🎉', '🎊', '🎈', '🎂', '🎁', '🌟', '✨'
+    '😀',
+    '😂',
+    '🤣',
+    '😊',
+    '😍',
+    '🥰',
+    '😘',
+    '😎',
+    '🤔',
+    '🤨',
+    '😐',
+    '😑',
+    '😶',
+    '🙄',
+    '😏',
+    '😣',
+    '😥',
+    '😮',
+    '🤐',
+    '🤤',
+    '😪',
+    '😫',
+    '🥱',
+    '😴',
+    '😌',
+    '😛',
+    '😜',
+    '😝',
+    '🤤',
+    '👍',
+    '👎',
+    '👌',
+    '👍',
+    '🤞',
+    '🤝',
+    '👊',
+    '✊',
+    '❤️',
+    '🧡',
+    '💛',
+    '💚',
+    '💙',
+    '💜',
+    '🖤',
+    '👋',
+    '🎉',
+    '🎊',
+    '🎈',
+    '🎂',
+    '🎁',
+    '🌟',
+    '✨',
   ];
+
+  @ViewChild('messagesList') private messagesList!: ElementRef;
 
   constructor(
     private route: ActivatedRoute,
@@ -1071,38 +830,42 @@ export class GroupDetailComponent implements OnInit {
   }
 
   private subscribeToGroupChanges() {
-    this.route.params.pipe(
-      switchMap(params => {
-        const groupId = params['id'];
-        if (groupId) {
-          return this.groupService.getGroup(groupId);
+    this.route.params
+      .pipe(
+        switchMap((params) => {
+          const groupId = params['id'];
+          if (groupId) {
+            return this.groupService.getGroup(groupId);
+          }
+          return of(null);
+        })
+      )
+      .subscribe((group) => {
+        if (group) {
+          this.group = group;
+          this.loadExpenses(group.id!);
+          this.loadBalances(group.id!);
+          this.loadMessages(group.id!);
         }
-        return of(null);
-      })
-    ).subscribe(group => {
-      if (group) {
-        this.group = group;
-        this.loadExpenses(group.id!);
-        this.loadBalances(group.id!);
-        this.loadMessages(group.id!);
-      }
-    });
+      });
   }
 
   private loadExpenses(groupId: string) {
-    this.groupService.getGroupExpenses(groupId).subscribe(expenses => {
+    this.groupService.getGroupExpenses(groupId).subscribe((expenses) => {
       this.expenses = expenses;
     });
   }
 
   private loadBalances(groupId: string) {
-    this.groupService.calculateBalances(groupId).subscribe(balances => {
+    this.groupService.calculateBalances(groupId).subscribe((balances) => {
       this.balances = balances;
     });
   }
 
   private async loadCategories() {
-    const categories = await firstValueFrom(this.categoryService.getCategories());
+    const categories = await firstValueFrom(
+      this.categoryService.getCategories()
+    );
     if (categories) {
       this.categories = categories;
     }
@@ -1122,6 +885,9 @@ export class GroupDetailComponent implements OnInit {
           this.messageCtrl.value
         );
         this.messageCtrl.reset();
+
+        // Debug
+        console.log('Message sent successfully');
       } catch (error) {
         console.error('Error sending message:', error);
       }
@@ -1129,7 +895,7 @@ export class GroupDetailComponent implements OnInit {
   }
 
   getPaidByName(expense: GroupExpense): string {
-    const member = this.group?.members.find(m => m.userId === expense.paidBy);
+    const member = this.group?.members.find((m) => m.userId === expense.paidBy);
     return member?.displayName || 'Unknown';
   }
 
@@ -1149,7 +915,7 @@ export class GroupDetailComponent implements OnInit {
   async addMember() {
     const dialogRef = this.dialog.open(AddMemberDialogComponent, {
       width: '400px',
-      data: { group: this.group }
+      data: { group: this.group },
     });
 
     dialogRef.afterClosed().subscribe(async (email: string) => {
@@ -1165,12 +931,15 @@ export class GroupDetailComponent implements OnInit {
 
   async removeMember(memberId: string) {
     try {
-      const result = await this.dialog.open(ConfirmDialogComponent, {
-        data: {
-          title: 'Xóa thành viên',
-          message: 'Bạn có chắc chắn muốn xóa thành viên này?'
-        }
-      }).afterClosed().toPromise();
+      const result = await this.dialog
+        .open(ConfirmDialogComponent, {
+          data: {
+            title: 'Xóa thành viên',
+            message: 'Bạn có chắc chắn muốn xóa thành viên này?',
+          },
+        })
+        .afterClosed()
+        .toPromise();
 
       if (result && this.group?.id) {
         await this.groupService.removeMember(this.group.id, memberId);
@@ -1187,16 +956,19 @@ export class GroupDetailComponent implements OnInit {
   getMonthlyExpenses(): number {
     const now = new Date();
     return this.expenses
-      .filter(exp => {
+      .filter((exp) => {
         try {
-          const expDate = exp.date instanceof Date 
-            ? exp.date 
-            : typeof exp.date === 'object' && 'toDate' in (exp.date as any)
-              ? (exp.date as any).toDate() 
+          const expDate =
+            exp.date instanceof Date
+              ? exp.date
+              : typeof exp.date === 'object' && 'toDate' in (exp.date as any)
+              ? (exp.date as any).toDate()
               : new Date(exp.date);
-              
-          return expDate.getMonth() === now.getMonth() && 
-                 expDate.getFullYear() === now.getFullYear();
+
+          return (
+            expDate.getMonth() === now.getMonth() &&
+            expDate.getFullYear() === now.getFullYear()
+          );
         } catch (error) {
           console.error('Lỗi khi xử lý ngày tháng:', error);
           return false;
@@ -1207,30 +979,37 @@ export class GroupDetailComponent implements OnInit {
 
   getMemberExpenses(userId: string): number {
     return this.expenses
-      .filter(exp => exp.paidBy === userId)
+      .filter((exp) => exp.paidBy === userId)
       .reduce((sum, exp) => sum + exp.amount, 0);
   }
 
   getMemberBalance(userId: string): number {
     const paid = this.getMemberExpenses(userId);
     const share = this.expenses
-      .flatMap(exp => exp.splitBetween)
-      .filter(split => split.userId === userId)
+      .flatMap((exp) => exp.splitBetween)
+      .filter((split) => split.userId === userId)
       .reduce((sum, split) => sum + split.amount, 0);
     return paid - share;
   }
 
   get isAdmin(): boolean {
     const userId = this.authService.getCurrentUserId();
-    return this.group?.members.some(m => m.userId === userId && m.role === 'admin') || false;
+    return (
+      this.group?.members.some(
+        (m) => m.userId === userId && m.role === 'admin'
+      ) || false
+    );
   }
 
   getCategoryName(categoryId: string): string {
-    return this.categories.find(c => c.id === categoryId)?.name || 'Không có danh mục';
+    return (
+      this.categories.find((c) => c.id === categoryId)?.name ||
+      'Không có danh mục'
+    );
   }
 
   getCategoryIcon(categoryId: string): string {
-    return this.categories.find(c => c.id === categoryId)?.icon || 'category';
+    return this.categories.find((c) => c.id === categoryId)?.icon || 'category';
   }
 
   toggleEmojiPicker() {
@@ -1239,12 +1018,15 @@ export class GroupDetailComponent implements OnInit {
 
   addEmoji(emoji: string) {
     const currentValue = this.messageCtrl.value || '';
-    const cursorPosition = (document.activeElement as HTMLInputElement)?.selectionStart || currentValue.length;
-    
-    const newValue = currentValue.slice(0, cursorPosition) + 
-                     emoji + 
-                     currentValue.slice(cursorPosition);
-                     
+    const cursorPosition =
+      (document.activeElement as HTMLInputElement)?.selectionStart ||
+      currentValue.length;
+
+    const newValue =
+      currentValue.slice(0, cursorPosition) +
+      emoji +
+      currentValue.slice(cursorPosition);
+
     this.messageCtrl.setValue(newValue);
     this.showEmojiPicker = false;
   }
@@ -1260,10 +1042,10 @@ export class GroupDetailComponent implements OnInit {
   async addExpense() {
     const dialogRef = this.dialog.open(AddExpenseDialogComponent, {
       width: '500px',
-      data: { group: this.group }
+      data: { group: this.group },
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result) {
         this.groupService.addGroupExpense(result);
         this.loadExpenses(this.group!.id!);
@@ -1274,17 +1056,20 @@ export class GroupDetailComponent implements OnInit {
 
   get isMember(): boolean {
     const userId = this.authService.getCurrentUserId();
-    return this.group?.members.some(m => m.userId === userId) || false;
+    return this.group?.members.some((m) => m.userId === userId) || false;
   }
 
   async deleteExpense(expense: GroupExpense) {
     try {
-      const result = await this.dialog.open(ConfirmDialogComponent, {
-        data: {
-          title: 'Xóa chi tiêu',
-          message: 'Bạn có chắc chắn muốn xóa chi tiêu này?'
-        }
-      }).afterClosed().toPromise();
+      const result = await this.dialog
+        .open(ConfirmDialogComponent, {
+          data: {
+            title: 'Xóa chi tiêu',
+            message: 'Bạn có chắc chắn muốn xóa chi tiêu này?',
+          },
+        })
+        .afterClosed()
+        .toPromise();
 
       if (result && this.group?.id) {
         await this.groupService.deleteExpense(expense.id!);
@@ -1304,7 +1089,7 @@ export class GroupDetailComponent implements OnInit {
         amount: split.amount,
         groupId: this.group!.id!,
         groupName: this.group!.name,
-        expenseDesc: expense.description
+        expenseDesc: expense.description,
       });
 
       // Show success message
@@ -1318,13 +1103,13 @@ export class GroupDetailComponent implements OnInit {
   async editExpense(expense: GroupExpense) {
     const dialogRef = this.dialog.open(AddExpenseDialogComponent, {
       width: '500px',
-      data: { 
+      data: {
         group: this.group,
-        expense: expense // Truyền expense hiện tại để edit
-      }
+        expense: expense, // Truyền expense hiện tại để edit
+      },
     });
 
-    dialogRef.afterClosed().subscribe(async result => {
+    dialogRef.afterClosed().subscribe(async (result) => {
       if (result && this.group?.id) {
         try {
           await this.groupService.updateExpense(expense.id!, result);
@@ -1336,4 +1121,20 @@ export class GroupDetailComponent implements OnInit {
       }
     });
   }
-} 
+
+  isOnline(userId: string): boolean {
+    // Implement logic kiểm tra online status
+    return false; // Hoặc true tùy vào logic thực tế
+  }
+
+  ngAfterViewChecked() {
+    this.scrollToBottom();
+  }
+
+  private scrollToBottom(): void {
+    try {
+      this.messagesList.nativeElement.scrollTop =
+        this.messagesList.nativeElement.scrollHeight;
+    } catch (err) {}
+  }
+}

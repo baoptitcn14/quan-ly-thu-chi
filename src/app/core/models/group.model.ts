@@ -32,6 +32,7 @@ export interface GroupExpense {
   date: any; // hoặc Date | firebase.firestore.Timestamp
   category: string;
   groupId: string;
+  createdAt: Date;
 }
 
 export interface SplitDetail {

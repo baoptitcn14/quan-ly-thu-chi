@@ -30,12 +30,21 @@ export interface Category {
 })
 export class CategoryService {
   private readonly collectionName = 'categories';
+  private categories: Category[] = [];
 
   constructor(
     private firestore: Firestore,
     private authService: AuthService,
     private userDataService: UserDataService
-  ) {}
+  ) {
+    this.initializeCategories();
+  }
+
+  private initializeCategories(): void {
+    this.getCategories().subscribe(categories => {
+      this.categories = categories;
+    });
+  }
 
   getCategories(): Observable<Category[]> {
     const userId = this.authService.getCurrentUserId();
@@ -71,5 +80,9 @@ export class CategoryService {
     }
 
     await deleteDoc(docRef);
+  }
+
+  getCategory(categoryId: string): Category | undefined {
+    return this.categories.find(cat => cat.id === categoryId);
   }
 } 

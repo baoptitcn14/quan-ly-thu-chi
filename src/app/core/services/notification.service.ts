@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Firestore, collection, addDoc, query, where, orderBy, limit, collectionData, doc, updateDoc, writeBatch, getDocs } from '@angular/fire/firestore';
 import { AuthService } from './auth.service';
 import { Observable, of } from 'rxjs';
+import { SavingSuggestion } from '../models/saving-suggestion.model';
 
 export interface Notification {
   id?: string;
@@ -110,5 +111,25 @@ export class NotificationService {
     });
 
     await batch.commit();
+  }
+
+  async sendSavingSuggestion(suggestion: Partial<SavingSuggestion>) {
+    const userId = this.authService.getCurrentUserId();
+    if (!userId) return;
+
+    const notification = {
+      userId,
+      type: suggestion.type,
+      title: suggestion.title,
+      message: suggestion.message,
+      category: suggestion.category,
+      amount: suggestion.amount,
+      comparisonData: suggestion.comparisonData,
+      suggestedActions: suggestion.suggestedActions,
+      createdAt: new Date(),
+      read: false
+    };
+
+    await addDoc(collection(this.firestore, this.notificationsCollection), notification);
   }
 } 

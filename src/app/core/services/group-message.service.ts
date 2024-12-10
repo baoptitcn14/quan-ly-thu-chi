@@ -22,7 +22,7 @@ export class GroupMessageService {
     const q = query(
       messagesRef,
       where('groupId', '==', groupId),
-      orderBy('createdAt', 'desc'),
+      orderBy('createdAt', 'asc'),
       limit(limitCount)
     );
     return collectionData(q, { idField: 'id' }) as Observable<GroupMessage[]>;

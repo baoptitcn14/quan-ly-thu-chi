@@ -30,6 +30,7 @@ interface UserDoc {
 export class GroupService {
   private readonly groupsCollection = 'groups';
   private readonly expensesCollection = 'group-expenses';
+  private currentGroup: Group | null = null;
 
   constructor(private firestore: Firestore, private authService: AuthService) {}
 
@@ -355,5 +356,20 @@ export class GroupService {
       console.error('Error updating expense:', error);
       throw error;
     }
+  }
+
+  // Thêm getter
+  getCurrentGroup(): Group | null {
+    return this.currentGroup;
+  }
+
+  // Cập nhật setter khi load group
+  async loadGroup(groupId: string) {
+    const docRef = doc(this.firestore, this.groupsCollection, groupId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      this.currentGroup = { id: docSnap.id, ...docSnap.data() } as Group;
+    }
+    return this.currentGroup;
   }
 }

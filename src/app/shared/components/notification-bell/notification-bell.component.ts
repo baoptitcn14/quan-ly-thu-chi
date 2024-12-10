@@ -199,8 +199,12 @@ export class NotificationBellComponent implements OnInit {
 
   getIcon(notification: any): string {
     switch (notification.type) {
-      case 'payment_reminder':
-        return 'payment';
+      case 'overspending':
+        return 'warning';
+      case 'category_alert':
+        return 'trending_up';
+      case 'saving_goal':
+        return 'savings';
       default:
         return 'notifications';
     }
@@ -208,8 +212,12 @@ export class NotificationBellComponent implements OnInit {
 
   getIconColor(notification: any): string {
     switch (notification.type) {
-      case 'payment_reminder':
+      case 'overspending':
+        return '#ef4444';
+      case 'category_alert':
         return '#f59e0b';
+      case 'saving_goal':
+        return '#10b981';
       default:
         return '#64748b';
     }
