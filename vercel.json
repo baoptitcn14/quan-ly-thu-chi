@@ -1,7 +1,16 @@
 {
     "version": 2,
-
-    "rewrites": [
-        {"source": "/(.*)", "destination": "/browser"}
+    "routes": [
+      {
+        "handle": "filesystem"
+      },
+      {
+        "src": "/assets/(.*)",
+        "dest": "/browser/assets/$1"
+      },
+      {
+        "src": "/(.*)",
+        "dest": "/browser/index.html"
+      }
     ]
   }
