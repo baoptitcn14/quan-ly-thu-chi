@@ -1,6 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -11,6 +16,7 @@ import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { SavingGoalService } from '../../../../core/services/saving-goal.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { NumberFormatter } from '../../../../shared/utils/number-formatter';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-saving-goal-form',
@@ -24,7 +30,7 @@ import { NumberFormatter } from '../../../../shared/utils/number-formatter';
     MatButtonModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    RouterModule
+    RouterModule,
   ],
   template: `
     <div class="form-container">
@@ -33,29 +39,40 @@ import { NumberFormatter } from '../../../../shared/utils/number-formatter';
       <form [formGroup]="goalForm" (ngSubmit)="onSubmit()">
         <mat-form-field appearance="outline">
           <mat-label>Tên mục tiêu</mat-label>
-          <input matInput formControlName="name">
+          <input matInput formControlName="name" />
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Số tiền mục tiêu</mat-label>
-          <input matInput formControlName="targetAmount" (input)="formatNumber($event)">
+          <input
+            matInput
+            formControlName="targetAmount"
+            (input)="formatNumber($event)"
+          />
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Danh mục</mat-label>
           <mat-select formControlName="category">
             @for (category of categories; track category.id) {
-              <mat-option [value]="category.id">
-                {{ category.name }}
-              </mat-option>
+            <mat-option [value]="category.id">
+              {{ category.name }}
+            </mat-option>
             }
           </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Hạn hoàn thành</mat-label>
-          <input matInput [matDatepicker]="deadlinePicker" formControlName="deadline">
-          <mat-datepicker-toggle matSuffix [for]="deadlinePicker"></mat-datepicker-toggle>
+          <input
+            matInput
+            [matDatepicker]="deadlinePicker"
+            formControlName="deadline"
+          />
+          <mat-datepicker-toggle
+            matSuffix
+            [for]="deadlinePicker"
+          ></mat-datepicker-toggle>
           <mat-datepicker #deadlinePicker></mat-datepicker>
         </mat-form-field>
 
@@ -65,7 +82,12 @@ import { NumberFormatter } from '../../../../shared/utils/number-formatter';
         </mat-form-field>
 
         <div class="button-group">
-          <button mat-raised-button color="primary" type="submit" [disabled]="goalForm.invalid">
+          <button
+            mat-raised-button
+            color="primary"
+            type="submit"
+            [disabled]="goalForm.invalid"
+          >
             {{ isEditing ? 'Cập nhật' : 'Thêm mới' }}
           </button>
           <button mat-stroked-button type="button" routerLink="/saving-goals">
@@ -75,45 +97,48 @@ import { NumberFormatter } from '../../../../shared/utils/number-formatter';
       </form>
     </div>
   `,
-  styles: [`
-    .form-container {
-      max-width: 600px;
-      margin: 2rem auto;
-      padding: 2rem;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  styles: [
+    `
+      .form-container {
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
-      h2 {
-        margin-bottom: 2rem;
-        text-align: center;
-        color: #333;
-      }
-
-      form {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-
-        mat-form-field {
-          width: 100%;
+        h2 {
+          margin-bottom: 2rem;
+          text-align: center;
+          color: #333;
         }
 
-        .button-group {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
+        form {
+          display: flex;
+          flex-direction: column;
           gap: 1rem;
-          margin-top: 1rem;
+
+          mat-form-field {
+            width: 100%;
+          }
+
+          .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+          }
         }
       }
-    }
-  `]
+    `,
+  ],
 })
-export class SavingGoalFormComponent implements OnInit {
+export class SavingGoalFormComponent implements OnInit, OnDestroy {
   goalForm: FormGroup;
   categories: any[] = [];
   isEditing = false;
   goalId: string | null = null;
+  private subscriptions = new Subscription();
 
   constructor(
     private fb: FormBuilder,
@@ -127,23 +152,36 @@ export class SavingGoalFormComponent implements OnInit {
       targetAmount: ['', [Validators.required, Validators.min(0)]],
       category: ['', Validators.required],
       deadline: [new Date(), Validators.required],
-      description: ['']
+      description: [''],
     });
   }
 
+  ngOnDestroy(): void {
+    if (this.subscriptions) {
+      this.subscriptions.unsubscribe();
+    }
+  }
+
   ngOnInit() {
-    this.loadCategories();
-    this.route.params.subscribe(params => {
+    const categorySub = this.categoryService
+      .getCategories()
+      .subscribe((categories) => {
+        this.categories = categories;
+      });
+    this.subscriptions.add(categorySub);
+
+    const paramSub = this.route.params.subscribe((params) => {
       if (params['id']) {
         this.isEditing = true;
         this.goalId = params['id'];
         this.loadGoal(params['id']);
       }
     });
+    this.subscriptions.add(paramSub);
   }
 
   private loadCategories() {
-    this.categoryService.getCategories().subscribe(categories => {
+    this.categoryService.getCategories().subscribe((categories) => {
       this.categories = categories;
     });
   }
@@ -162,8 +200,11 @@ export class SavingGoalFormComponent implements OnInit {
         const formData = this.goalForm.value;
         const goalData = {
           ...formData,
-          targetAmount: parseFloat(formData.targetAmount.toString().replace(/[^0-9]/g, '')) || 0,
-          deadline: new Date(formData.deadline)
+          targetAmount:
+            parseFloat(
+              formData.targetAmount.toString().replace(/[^0-9]/g, '')
+            ) || 0,
+          deadline: new Date(formData.deadline),
         };
 
         if (this.isEditing && this.goalId) {
@@ -178,4 +219,4 @@ export class SavingGoalFormComponent implements OnInit {
       }
     }
   }
-} 
+}

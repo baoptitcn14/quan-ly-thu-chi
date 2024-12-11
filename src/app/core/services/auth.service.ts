@@ -134,7 +134,7 @@ export class AuthService {
     if (user) {
       this.cookieService.set(this.CACHE_KEY, JSON.stringify(user), {
         expires: 7, // Cookie hết hạn sau 7 ngày
-        secure: true, // Chỉ gửi qua HTTPS
+        secure: true, // Chỉ gi qua HTTPS
         sameSite: 'Strict', // Bảo mật CSRF
       });
     } else {

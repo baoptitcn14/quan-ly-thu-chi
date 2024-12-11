@@ -2,12 +2,19 @@ import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { NotificationService } from '../../../../core/services/notification.service';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-split-list',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatTooltipModule],
+  imports: [
+    CommonModule, 
+    MatIconModule, 
+    MatTooltipModule,
+    MatSnackBarModule
+  ],
   template: `
     <div class="split-list">
       <h5 class="split-title">
@@ -224,23 +231,53 @@ export class SplitListComponent {
   @Input() expenseDesc = '';
   @Input() groupName = '';
 
-  constructor(private notificationService: NotificationService) {}
+  constructor(
+    private notificationService: NotificationService,
+    private snackBar: MatSnackBar
+  ) {}
 
   get allPaid(): boolean {
     return this.splits.every((split) => split.status === 'paid');
   }
 
   async sendReminders() {
-    const unpaidSplits = this.splits.filter((split) => split.status !== 'paid');
-    for (const split of unpaidSplits) {
-      await this.notificationService.sendPaymentReminder({
-        userId: split.userId,
-        expenseId: this.expenseId,
-        amount: split.amount,
-        groupId: this.groupId,
-        groupName: this.groupName,
-        expenseDesc: this.expenseDesc,
-      });
+    try {
+      const unpaidSplits = this.splits.filter((split) => split.status !== 'paid');
+      for (const split of unpaidSplits) {
+        await this.notificationService.sendPaymentReminder({
+          userId: split.userId,
+          expenseId: this.expenseId,
+          amount: split.amount,
+          groupId: this.groupId,
+          groupName: this.groupName,
+          expenseDesc: this.expenseDesc,
+        });
+      }
+      
+      // Hiển thị thông báo thành công
+      this.snackBar.open(
+        'Đã gửi nhắc nhở thanh toán thành công!', 
+        'Đóng', 
+        {
+          duration: 3000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar'],
+          
+        }
+      );
+    } catch (error) {
+      // Hiển thị thông báo lỗi nếu có
+      this.snackBar.open(
+        'Có lỗi xảy ra khi gửi nhắc nhở thanh toán!', 
+        'Đóng', 
+        {
+          duration: 3000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        }
+      );
     }
   }
 }

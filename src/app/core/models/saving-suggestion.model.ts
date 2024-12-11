@@ -1,17 +1,17 @@
 export interface SavingSuggestion {
   id?: string;
   userId: string;
-  type: 'overspending' | 'category_alert' | 'saving_goal';
+  type: 'category_alert' | 'unusual_spending' | 'saving_opportunity';
   title: string;
   message: string;
-  category?: string;
-  amount?: number;
+  category: string;
+  priority: 'high' | 'medium' | 'low';
+  potentialSaving: number;
+  suggestedActions: string[];
   comparisonData?: {
     currentSpending: number;
     averageSpending: number;
-    percentageIncrease: number;
+    percentageChange: number;
   };
-  suggestedActions: string[];
   createdAt: Date;
-  read: boolean;
 } 

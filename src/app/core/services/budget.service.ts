@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import {
   Firestore,
   collection,
@@ -11,7 +11,7 @@ import {
   Timestamp,
   getDocs,
 } from '@angular/fire/firestore';
-import { Observable, combineLatest, map, of, switchMap, firstValueFrom } from 'rxjs';
+import { Observable, combineLatest, map, of, switchMap, firstValueFrom, Subscription } from 'rxjs';
 import { AuthService } from './auth.service';
 import { TransactionService, Transaction } from './transaction.service';
 
@@ -58,8 +58,15 @@ interface SpendingAnalytics {
 @Injectable({
   providedIn: 'root',
 })
-export class BudgetService {
+export class BudgetService implements OnDestroy {
   private readonly collectionName = 'budgets';
+  private subscriptions = new Subscription();
+
+  ngOnDestroy() {
+    if (this.subscriptions) {
+      this.subscriptions.unsubscribe();
+    }
+  }
 
   constructor(
     private firestore: Firestore,
@@ -74,7 +81,7 @@ export class BudgetService {
     const budgetsRef = collection(this.firestore, this.collectionName);
     const budgetsQuery = query(budgetsRef, where('userId', '==', userId));
 
-    return collectionData(budgetsQuery, { idField: 'id' }).pipe(
+    const subscription = collectionData(budgetsQuery, { idField: 'id' }).pipe(
       switchMap((budgets) => {
         const promises = this.calculateBudgetStatus(budgets as Budget[]);
         return Promise.all(promises).then((updatedBudgets) => {
@@ -82,6 +89,8 @@ export class BudgetService {
         });
       })
     );
+    this.subscriptions.add(subscription);
+    return subscription;
   }
 
   async addBudget(
@@ -146,7 +155,7 @@ export class BudgetService {
         map((transactions): number => {
           return (transactions as TransactionWithTimestamp[])
             .filter((t) => {
-              // Ki��m tra giao dịch chi tiêu và danh mục
+              // Kiểm tra giao dịch chi tiêu và danh mục
               if (t.type !== 'expense' || t.category !== budget.categoryId) {
                 return false;
               }

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,6 +15,10 @@ import { ChartConfiguration } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 import { CategoryService, Category } from '../../../../core/services/category.service';
 import { SavingGoalService, SavingGoal } from '../../../../core/services/saving-goal.service';
+import { SavingSuggestionsComponent } from '../saving-suggestions/saving-suggestions.component';
+import { SpendingAnalysisService } from '../../../../core/services/spending-analysis.service';
+import { SpendingItem } from '../../../../core/models/spending.model';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -28,9 +32,13 @@ import { SavingGoalService, SavingGoal } from '../../../../core/services/saving-
     MatTableModule,
     BaseChartDirective,
     MatProgressBarModule,
+    SavingSuggestionsComponent,
   ],
   template: `
     <div class="dashboard-container">
+
+    <app-saving-suggestions></app-saving-suggestions>
+    
       <div class="header">
         <h2>Dashboard</h2>
         <button
@@ -255,7 +263,27 @@ import { SavingGoalService, SavingGoal } from '../../../../core/services/saving-
         display: grid;
         gap: 1.5rem;
         overflow-x: hidden;
+        position: relative;
+        height: 100%;
       }
+
+      .chat-fab {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 100;
+    }
+
+    .ai-chat-dialog {
+      position: fixed;
+      bottom: 5rem;
+      right: 2rem;
+      width: 400px;
+      z-index: 99;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
 
       .summary-cards {
         display: grid;
@@ -675,7 +703,9 @@ import { SavingGoalService, SavingGoal } from '../../../../core/services/saving-
     `,
   ],
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   monthlyIncome = 0;
   monthlyExpense = 0;
   balance = 0;
@@ -684,7 +714,7 @@ export class DashboardComponent implements OnInit {
   categories: Category[] = [];
   activeGoals: SavingGoal[] = [];
 
-  // Cấu hình cho biểu đồ cột
+  // Cấu hình biểu đồ cột
   barChartOptions: ChartConfiguration['options'] = {
     responsive: true,
     plugins: {
@@ -728,7 +758,7 @@ export class DashboardComponent implements OnInit {
     ]
   };
 
-  // Cấu hình cho biểu đồ tròn
+  // Cấu hình biểu đồ tròn
   pieChartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
@@ -758,12 +788,8 @@ export class DashboardComponent implements OnInit {
     datasets: [{
       data: [],
       backgroundColor: [
-        '#FF6384', // Hồng
-        '#36A2EB', // Xanh dương
-        '#FFCE56', // Vàng
-        '#4BC0C0', // Xanh lá
-        '#9966FF', // Tím
-        '#FF9F40'  // Cam
+        '#FF6384', '#36A2EB', '#FFCE56',
+        '#4BC0C0', '#9966FF', '#FF9F40'
       ],
       hoverOffset: 4
     }]
@@ -773,42 +799,53 @@ export class DashboardComponent implements OnInit {
     private transactionService: TransactionService,
     private budgetService: BudgetService,
     private categoryService: CategoryService,
-    private savingGoalService: SavingGoalService
-  ) {}
+    private savingGoalService: SavingGoalService,
+    private spendingAnalysisService: SpendingAnalysisService
+  ) { }
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.loadTransactions();
     this.loadCategories();
     this.loadSavingGoals();
   }
 
-  private loadTransactions() {
-    this.transactionService.getTransactions().subscribe(transactions => {
-      this.recentTransactions = transactions.slice(0, 5);
-      
-      // Tính toán tổng thu chi
-      this.monthlyIncome = transactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
-      this.monthlyExpense = transactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
-      this.balance = this.monthlyIncome - this.monthlyExpense;
-
-      // Cập nhật dữ liệu biểu đồ
-      this.updateChartData(transactions);
-    });
+  private loadTransactions(): void {
+    this.transactionService.getTransactions()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(transactions => {
+        this.recentTransactions = transactions.slice(0, 5);
+        this.calculateTotals(transactions);
+        this.updateChartData(transactions);
+      });
   }
 
-  private updateChartData(transactions: Transaction[]) {
-    // Dữ liệu cho biểu đồ cột (thu chi theo tháng)
+  private calculateTotals(transactions: Transaction[]): void {
+    this.monthlyIncome = this.sumTransactionsByType(transactions, 'income');
+    this.monthlyExpense = this.sumTransactionsByType(transactions, 'expense');
+    this.balance = this.monthlyIncome - this.monthlyExpense;
+  }
+
+  private sumTransactionsByType(transactions: Transaction[], type: 'income' | 'expense'): number {
+    return transactions
+      .filter(t => t.type === type)
+      .reduce((sum, t) => sum + t.amount, 0);
+  }
+
+  private updateChartData(transactions: Transaction[]): void {
     const monthlyData = this.getMonthlyData(transactions);
+    this.updateBarChartData(monthlyData);
+
+    const categoryData = this.getCategoryData(transactions);
+    this.updatePieChartData(categoryData);
+  }
+
+  private updateBarChartData(monthlyData: any): void {
     this.barChartData.labels = monthlyData.labels;
     this.barChartData.datasets[0].data = monthlyData.income;
     this.barChartData.datasets[1].data = monthlyData.expense;
+  }
 
-    // Dữ liệu cho biểu đồ tròn (chi tiêu theo danh mục)
-    const categoryData = this.getCategoryData(transactions);
+  private updatePieChartData(categoryData: any): void {
     this.pieChartData.labels = categoryData.labels;
     this.pieChartData.datasets[0].data = categoryData.values;
   }
@@ -820,58 +857,40 @@ export class DashboardComponent implements OnInit {
       expense: [] as number[]
     };
 
-    // Lấy 6 tháng gần nhất
-    const last6Months = Array.from({ length: 6 }, (_, i) => {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      return date.toLocaleString('vi-VN', { month: 'long', year: 'numeric' });
-    }).reverse();
+    const last6Months = this.getLast6Months();
+    monthlyData.labels = last6Months;
 
     last6Months.forEach(month => {
-      monthlyData.labels.push(month);
-
-      // Tính tổng thu
-      const monthlyIncome = transactions
-        .filter(t => {
-          const transDate = t.date instanceof Date ? t.date : t.date.toDate();
-          return transDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' }) === month 
-            && t.type === 'income';
-        })
-        .reduce((sum, t) => sum + t.amount, 0);
-      monthlyData.income.push(monthlyIncome);
-
-      // Tính tổng chi
-      const monthlyExpense = transactions
-        .filter(t => {
-          const transDate = t.date instanceof Date ? t.date : t.date.toDate();
-          return transDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' }) === month 
-            && t.type === 'expense';
-        })
-        .reduce((sum, t) => sum + t.amount, 0);
-      monthlyData.expense.push(monthlyExpense);
+      const monthTransactions = this.filterTransactionsByMonth(transactions, month);
+      monthlyData.income.push(this.sumTransactionsByType(monthTransactions, 'income'));
+      monthlyData.expense.push(this.sumTransactionsByType(monthTransactions, 'expense'));
     });
 
     return monthlyData;
   }
 
+  private getLast6Months(): string[] {
+    return Array.from({ length: 6 }, (_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      return date.toLocaleString('vi-VN', { month: 'long', year: 'numeric' });
+    }).reverse();
+  }
+
+  private filterTransactionsByMonth(transactions: Transaction[], month: string): Transaction[] {
+    return transactions.filter(t => {
+      const transDate = t.date instanceof Date ? t.date : t.date.toDate();
+      return transDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' }) === month;
+    });
+  }
+
   private getCategoryData(transactions: Transaction[]) {
     const currentMonth = new Date().toLocaleString('vi-VN', { month: 'long', year: 'numeric' });
-    const expenseTransactions = transactions.filter(t => {
-      const transDate = t.date instanceof Date ? t.date : t.date.toDate();
-      return t.type === 'expense' && 
-        transDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' }) === currentMonth;
-    });
+    const monthTransactions = this.filterTransactionsByMonth(transactions, currentMonth)
+      .filter(t => t.type === 'expense');
 
-    // Tính tổng và sắp xếp theo giá trị giảm dần
-    const categoryTotals = new Map<string, number>();
-    expenseTransactions.forEach(t => {
-      const current = categoryTotals.get(t.categoryName) || 0;
-      categoryTotals.set(t.categoryName, current + t.amount);
-    });
-
-    const sortedCategories = Array.from(categoryTotals.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6); // Chỉ lấy top 6 danh mục
+    const categoryTotals = this.groupTransactionsByCategory(monthTransactions);
+    const sortedCategories = this.getSortedCategories(categoryTotals);
 
     return {
       labels: sortedCategories.map(([cat]) => cat),
@@ -879,23 +898,69 @@ export class DashboardComponent implements OnInit {
     };
   }
 
-  private loadCategories() {
-    this.categoryService.getCategories().subscribe(categories => {
-      this.categories = categories;
-    });
+  private groupTransactionsByCategory(transactions: Transaction[]): Map<string, number> {
+    return transactions.reduce((totals, t) => {
+      const current = totals.get(t.categoryName) || 0;
+      totals.set(t.categoryName, current + t.amount);
+      return totals;
+    }, new Map<string, number>());
   }
 
-  private loadSavingGoals() {
-    this.savingGoalService.getSavingGoals().subscribe(goals => {
-      this.activeGoals = goals
-        .filter(g => g.status === 'active')
-        .slice(0, 4);
-    });
+  private getSortedCategories(totals: Map<string, number>): [string, number][] {
+    return Array.from(totals.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6);
+  }
+
+  private loadCategories(): void {
+    this.categoryService.getCategories()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(categories => {
+        this.categories = categories;
+      });
+  }
+
+  private loadSavingGoals(): void {
+    this.savingGoalService.getSavingGoals()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(goals => {
+        this.activeGoals = goals
+          .filter(g => g.status === 'active')
+          .slice(0, 4);
+      });
   }
 
   getProgressColor(goal: SavingGoal): string {
-    if ((goal.progress ?? 0) >= 100) return 'primary';
-    if ((goal.progress ?? 0) >= 80) return 'accent';
-    return 'primary';
+    const progress = goal.progress ?? 0;
+    return progress >= 100 ? 'primary' :
+      progress >= 80 ? 'accent' :
+        'primary';
+  }
+
+  async analyzeAndSuggest(): Promise<void> {
+    try {
+      const spendingItems: SpendingItem[] = this.recentTransactions.map(t => ({
+        amount: t.amount,
+        category: t.categoryName,
+        date: t.date instanceof Date ? t.date : t.date.toDate(),
+        note: t.description || ''
+      }));
+
+      const analysis = await this.spendingAnalysisService.analyzeSpending(
+        'Phân tích chi tiêu',
+        spendingItems
+      );
+
+      console.log('Kết quả phân tích:', analysis);
+      // TODO: Hiển thị kết quả phân tích trong UI
+
+    } catch (error) {
+      console.error('Lỗi khi phân tích chi tiêu:', error);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

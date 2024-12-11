@@ -1,33 +1,50 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { Firestore, collection, addDoc, query, where, orderBy, limit, collectionData, doc, updateDoc, writeBatch, getDocs } from '@angular/fire/firestore';
 import { AuthService } from './auth.service';
-import { Observable, of } from 'rxjs';
+import { Observable, of, Subscription } from 'rxjs';
 import { SavingSuggestion } from '../models/saving-suggestion.model';
 
 export interface Notification {
   id?: string;
   userId: string;
-  type: 'payment_reminder';
+  type: 'payment_reminder' | 'saving_suggestion';
   title: string;
   message: string;
-  expenseId: string;
-  amount: number;
-  groupId: string;
-  groupName: string;
+  expenseId?: string;
+  amount?: number;
+  groupId?: string;
+  groupName?: string;
   createdAt: Date;
   read: boolean;
+  suggestedActions?: string[];
+  priority?: 'high' | 'medium' | 'low';
+  potentialSaving?: number;
+}
+
+interface NotificationSavingSuggestion extends SavingSuggestion {
+  userId: string;
+  createdAt: Date;
+  read: boolean;
+  potentialSaving: number;
 }
 
 @Injectable({
   providedIn: 'root'
 })
-export class NotificationService {
+export class NotificationService implements OnDestroy {
   private notificationsCollection = 'notifications';
+  private subscriptions = new Subscription();
 
   constructor(
     private firestore: Firestore,
     private authService: AuthService
   ) {}
+
+  ngOnDestroy() {
+    if (this.subscriptions) {
+      this.subscriptions.unsubscribe();
+    }
+  }
 
   async sendPaymentReminder(data: {
     userId: string,
@@ -113,23 +130,7 @@ export class NotificationService {
     await batch.commit();
   }
 
-  async sendSavingSuggestion(suggestion: Partial<SavingSuggestion>) {
-    const userId = this.authService.getCurrentUserId();
-    if (!userId) return;
-
-    const notification = {
-      userId,
-      type: suggestion.type,
-      title: suggestion.title,
-      message: suggestion.message,
-      category: suggestion.category,
-      amount: suggestion.amount,
-      comparisonData: suggestion.comparisonData,
-      suggestedActions: suggestion.suggestedActions,
-      createdAt: new Date(),
-      read: false
-    };
-
-    await addDoc(collection(this.firestore, this.notificationsCollection), notification);
+  async sendSavingSuggestion(suggestion: NotificationSavingSuggestion) {
+    await addDoc(collection(this.firestore, this.notificationsCollection), suggestion);
   }
 } 

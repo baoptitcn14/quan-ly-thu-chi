@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -20,6 +20,7 @@ import {
 import { CategoryService } from '../../../../core/services/category.service';
 import { NumberFormatter } from '../../../../shared/utils/number-formatter';
 import { Timestamp } from 'firebase/firestore';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-budget-form',
@@ -150,11 +151,12 @@ import { Timestamp } from 'firebase/firestore';
     `,
   ],
 })
-export class BudgetFormComponent implements OnInit {
+export class BudgetFormComponent implements OnInit, OnDestroy {
   budgetForm: FormGroup;
   categories: any[] = [];
   isEditing = false;
   budgetId: string | null = null;
+  private subscriptions = new Subscription();
 
   constructor(
     private fb: FormBuilder,
@@ -173,18 +175,29 @@ export class BudgetFormComponent implements OnInit {
     });
   }
 
-  ngOnInit() {
-    this.categoryService.getCategories().subscribe((categories) => {
-      this.categories = categories;
-    });
+  ngOnDestroy(): void {
+    if (this.subscriptions) {
+      this.subscriptions.unsubscribe();
+    }
+  }
 
-    this.route.params.subscribe((params) => {
+  ngOnInit() {
+    const categorySub = this.categoryService
+      .getCategories()
+      .subscribe((categories) => {
+        this.categories = categories;
+      });
+    this.subscriptions.add(categorySub);
+
+    const paramSub = this.route.params.subscribe((params) => {
       if (params['id']) {
         this.isEditing = true;
         this.budgetId = params['id'];
         this.loadBudget(params['id']);
       }
     });
+    this.subscriptions.add(paramSub);
+    
   }
 
   private async loadBudget(id: string) {
@@ -247,5 +260,4 @@ export class BudgetFormComponent implements OnInit {
     NumberFormatter.formatCurrency(event);
     // this.budgetForm.patchValue({ amount: number });
   }
-
 }

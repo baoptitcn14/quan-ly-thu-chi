@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { 
   Firestore, 
   collection, 
@@ -10,7 +10,7 @@ import {
   collectionData, 
   getDoc 
 } from '@angular/fire/firestore';
-import { Observable, of } from 'rxjs';
+import { Observable, of, Subscription } from 'rxjs';
 import { AuthService } from './auth.service';
 import { UserDataService } from './user-data.service';
 
@@ -28,9 +28,10 @@ export interface Category {
 @Injectable({
   providedIn: 'root'
 })
-export class CategoryService {
+export class CategoryService implements OnDestroy {
   private readonly collectionName = 'categories';
   private categories: Category[] = [];
+  private subscriptions = new Subscription();
 
   constructor(
     private firestore: Firestore,
@@ -41,9 +42,16 @@ export class CategoryService {
   }
 
   private initializeCategories(): void {
-    this.getCategories().subscribe(categories => {
+    const subscription = this.getCategories().subscribe(categories => {
       this.categories = categories;
     });
+    this.subscriptions.add(subscription);
+  }
+
+  ngOnDestroy() {
+    if (this.subscriptions) {
+      this.subscriptions.unsubscribe();
+    }
   }
 
   getCategories(): Observable<Category[]> {

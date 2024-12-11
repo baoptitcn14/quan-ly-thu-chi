@@ -1,7 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { Firestore, collection, addDoc, query, where, orderBy, limit } from '@angular/fire/firestore';
 import { collectionData } from '@angular/fire/firestore';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { GroupMessage } from '../models/group.model';
 import { AuthService } from './auth.service';
 import { first } from 'rxjs/operators';

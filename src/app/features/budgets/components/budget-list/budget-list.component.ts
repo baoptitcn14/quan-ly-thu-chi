@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +8,7 @@ import { RouterModule } from '@angular/router';
 import { BudgetService, Budget } from '../../../../core/services/budget.service';
 import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-budget-list',
@@ -143,7 +144,8 @@ import { ConfirmDialogComponent } from '../../../../shared/components/confirm-di
     }
   `]
 })
-export class BudgetListComponent implements OnInit {
+export class BudgetListComponent implements OnInit, OnDestroy {
+  private subscriptions = new Subscription();
   budgets: Budget[] = [];
 
   constructor(
@@ -152,18 +154,17 @@ export class BudgetListComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.budgetService.getBudgets().subscribe({
-      next: (budgets) => {
-        this.budgets = budgets || [];
-        if (this.budgets.length === 0) {
-          console.log('Không có ngân sách nào được tìm thấy');
-        }
-      },
-      error: (error) => {
-        console.error('Lỗi khi lấy danh sách ngân sách:', error);
-        this.budgets = [];
-      }
-    });
+    const subscription = this.budgetService.getBudgets()
+      .subscribe(budgets => {
+        this.budgets = budgets;
+      });
+    this.subscriptions.add(subscription);
+  }
+
+  ngOnDestroy() {
+    if (this.subscriptions) {
+      this.subscriptions.unsubscribe();
+    }
   }
 
   getStatusColor(status: string | undefined): string {

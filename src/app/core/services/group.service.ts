@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import {
   Firestore,
   collection,
@@ -12,7 +12,7 @@ import {
   getDoc,
   docData,
 } from '@angular/fire/firestore';
-import { Observable, of, from, firstValueFrom, combineLatest } from 'rxjs';
+import { Observable, of, from, firstValueFrom, combineLatest, Subscription } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { Group, GroupExpense, GroupMember, SplitDetail } from '../models/group.model';
 import { AuthService } from './auth.service';
@@ -27,12 +27,19 @@ interface UserDoc {
 @Injectable({
   providedIn: 'root',
 })
-export class GroupService {
+export class GroupService implements OnDestroy {
   private readonly groupsCollection = 'groups';
   private readonly expensesCollection = 'group-expenses';
   private currentGroup: Group | null = null;
+  private subscriptions = new Subscription();
 
   constructor(private firestore: Firestore, private authService: AuthService) {}
+
+  ngOnDestroy() {
+    if (this.subscriptions) {
+      this.subscriptions.unsubscribe();
+    }
+  }
 
   // Tạo nhóm mới
   async createGroup(groupData: Partial<Group>): Promise<string | undefined> {
@@ -90,7 +97,7 @@ export class GroupService {
       where('memberIds', 'array-contains', userId)
     );
 
-    return collectionData(memberQuery, { idField: 'id' }).pipe(
+    const subscription = collectionData(memberQuery, { idField: 'id' }).pipe(
       map((groups: any) => {
         return groups.map((group: any) => ({
           ...group,
@@ -98,6 +105,8 @@ export class GroupService {
         })) as Group[];
       })
     );
+    this.subscriptions.add(subscription);
+    return subscription;
   }
 
   // Lấy thông tin chi tiết nhóm

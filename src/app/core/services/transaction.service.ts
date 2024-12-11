@@ -13,9 +13,10 @@ import {
   getDoc,
   Timestamp 
 } from '@angular/fire/firestore';
-import { Observable, of, from } from 'rxjs';
+import { Observable, of, from, firstValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthService } from './auth.service';
+import { SpendingAnalysisService } from './spending-analysis.service';
 
 export interface Transaction {
   id?: string;
@@ -36,7 +37,8 @@ export class TransactionService {
 
   constructor(
     private firestore: Firestore,
-    private authService: AuthService
+    private authService: AuthService,
+    private spendingAnalysisService: SpendingAnalysisService
   ) {}
 
   getTransactions(): Observable<Transaction[]> {
@@ -74,6 +76,17 @@ export class TransactionService {
     await updateDoc(docRef, {
       id: docRef.id
     });
+    
+    const transactions = await firstValueFrom(this.getTransactions());
+    await this.spendingAnalysisService.analyzeSpending(
+      "Phân tích chi tiêu gần đây",
+      transactions.map(t => ({
+        amount: t.amount,
+        category: t.category,
+        date: t.date instanceof Date ? t.date : t.date.toDate(),
+        note: t.description
+      }))
+    );
   }
 
   async updateTransaction(id: string, transaction: Partial<Transaction>): Promise<void> {

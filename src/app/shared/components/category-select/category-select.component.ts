@@ -1,4 +1,4 @@
-import { Component, Input, forwardRef } from '@angular/core';
+import { Component, Input, forwardRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -13,6 +13,7 @@ import { Category } from '../../../core/services/category.service';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { AddCategoryDialogComponent } from './add-category-dialog.component';
 import { CategoryDialogComponent } from '../../../features/categories/components/category-dialog/category-dialog.component';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-category-select',
@@ -127,13 +128,15 @@ import { CategoryDialogComponent } from '../../../features/categories/components
     }
   `]
 })
-export class CategorySelectComponent implements ControlValueAccessor {
+export class CategorySelectComponent implements ControlValueAccessor, OnDestroy {
   @Input() label = 'Danh mục';
   categories: Category[] = [];
   value: string = '';
 
   onChange: any = () => {};
   onTouch: any = () => {};
+
+  private subscriptions = new Subscription();
 
   constructor(
     private categoryService: CategoryService,
@@ -143,10 +146,13 @@ export class CategorySelectComponent implements ControlValueAccessor {
   }
 
   async loadCategories() {
-    const categories = await firstValueFrom(this.categoryService.getCategories());
-    if (categories) {
-      this.categories = categories;
-    }
+    const subscription = this.categoryService.getCategories()
+      .subscribe(categories => {
+        if (categories) {
+          this.categories = categories;
+        }
+      });
+    this.subscriptions.add(subscription);
   }
 
   async openAddCategoryDialog(event: Event) {
@@ -194,5 +200,11 @@ export class CategorySelectComponent implements ControlValueAccessor {
 
   registerOnTouched(fn: any): void {
     this.onTouch = fn;
+  }
+
+  ngOnDestroy() {
+    if (this.subscriptions) {
+      this.subscriptions.unsubscribe();
+    }
   }
 } 
