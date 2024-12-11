@@ -118,7 +118,7 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
      
 
       <!-- Main Content Area -->
-      <div class="main-area" [class.w100]="!(currentUser$ | async)">
+      <div class="main-area" [class.not-logged-in]="!(currentUser$ | async)">
         @if (currentUser$ | async) {
         <!-- Header -->
         <header class="header">
@@ -331,8 +331,9 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
         transition: margin-left 0.3s ease;
         padding: 1.5rem;
 
-        &.w100 {
+        &.not-logged-in {
           margin-left: 0;
+          padding: 0;
         }
       }
 
@@ -401,6 +402,8 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
         .main-area {
           margin-left: 0;
           padding: 1rem;
+          width: 100%;
+          padding: 0;
         }
 
         .header {
