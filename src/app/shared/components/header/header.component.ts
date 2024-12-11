@@ -15,7 +15,9 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
   selector: 'app-header',
   template: `
     <div class="app-container">
-      <!-- Sidebar -->
+      @if (currentUser$ | async) {
+        <div class="sidebar-overlay" (click)="toggleMenu()"></div>
+         <!-- Sidebar -->
       <aside class="sidebar" [class.expanded]="isMenuOpen">
         <div class="sidebar-header">
           <div class="logo">
@@ -112,9 +114,12 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
           </ul>
         </nav>
       </aside>
+      }
+     
 
       <!-- Main Content Area -->
-      <div class="main-area">
+      <div class="main-area" [class.w100]="!(currentUser$ | async)">
+        @if (currentUser$ | async) {
         <!-- Header -->
         <header class="header">
           <button class="menu-toggle" mat-icon-button (click)="toggleMenu()">
@@ -151,7 +156,7 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
             </mat-menu>
           </div>
         </header>
-
+        }
         <!-- Main Content -->
         <main class="main-content">
           <ng-content></ng-content>
@@ -325,6 +330,10 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
         min-height: 100vh;
         transition: margin-left 0.3s ease;
         padding: 1.5rem;
+
+        &.w100 {
+          margin-left: 0;
+        }
       }
 
       ::ng-deep .mat-menu-panel {
