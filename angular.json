@@ -29,7 +29,12 @@
             "assets": [
               "src/favicon.ico",
               "src/assets",
-              "src/assets/models/bert"
+              "src/assets/models/bert",
+              {
+                "glob": "**/*.json",
+                "input": "src/assets/models",
+                "output": "/assets/models"
+              }
             ],
             "styles": [
               "src/styles.scss"

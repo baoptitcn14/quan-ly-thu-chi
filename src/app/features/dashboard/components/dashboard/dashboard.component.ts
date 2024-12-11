@@ -37,7 +37,6 @@ import { Subject, takeUntil } from 'rxjs';
   template: `
     <div class="dashboard-container">
 
-    <app-saving-suggestions></app-saving-suggestions>
     
       <div class="header">
         <h2>Dashboard</h2>

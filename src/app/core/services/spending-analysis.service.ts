@@ -3,6 +3,8 @@ import * as tf from '@tensorflow/tfjs';
 import { SpendingItem, SpendingPatterns, UnusualSpending, SavingOpportunity } from '../models/spending.model';
 import { CategoryService } from './category.service';
 import { firstValueFrom } from 'rxjs';
+import { Firestore, collection, addDoc, Timestamp } from '@angular/fire/firestore';
+import { AuthService } from './auth.service';
 
 type ResponseType = 'chi_tieu_thang' | 'goi_y_tiet_kiem' | 'chi_tieu_bat_thuong' | 'default';
 
@@ -15,7 +17,9 @@ export class SpendingAnalysisService {
   private categoryNames: {[key: string]: string} = {};
 
   constructor(
-    private categoryService: CategoryService
+    private categoryService: CategoryService,
+    private firestore: Firestore,
+    private authService: AuthService
   ) {
     this.initModel();
     this.loadCategories();
@@ -35,7 +39,7 @@ export class SpendingAnalysisService {
 
   private async initModel() {
     try {
-      this.model = await tf.loadLayersModel('assets/models/bert/model.json');
+      this.model = await tf.loadLayersModel('assets/models/model.json');
     } catch (error) {
       console.warn('Không tìm thấy model, sử dụng phân tích đơn giản');
       this.model = null;
@@ -48,7 +52,9 @@ export class SpendingAnalysisService {
       const unusualSpendings = await this.detectUnusualSpendings(transactions);
       const savingOpportunities = this.identifySavingOpportunities(patterns);
 
-      // Nếu không có model, sử dụng phân tích đơn giản
+      // Lưu suggestions vào database
+      await this.saveSuggestions(savingOpportunities);
+
       if (!this.model) {
         return this.generateBasicResponse(question, {
           patterns,
@@ -129,11 +135,11 @@ export class SpendingAnalysisService {
       });
 
       // Phân tích theo tuần
-      const week = this.getWeekNumber(t.date);
+      const week = this.getWeekNumber(new Date(t.date));
       weeklyPatterns[week] = (weeklyPatterns[week] || 0) + t.amount;
 
       // Phân tích theo tháng 
-      const month = t.date.getMonth().toString();
+      const month = new Date(t.date).getMonth().toString();
       monthlyTotals[month] = (monthlyTotals[month] || 0) + t.amount;
     });
 
@@ -308,5 +314,34 @@ export class SpendingAnalysisService {
       return this.generateUnusualSpendingReport(analysis);
     }
     return this.generateMonthlyAnalysis(analysis);
+  }
+
+  private convertSpendingToText(spendingData: SpendingItem[]): string {
+    return spendingData
+      .map(item => {
+        // Chuyển đổi date thành đối tượng Date nếu nó là string
+        const date = typeof item.date === 'string' ? new Date(item.date) : item.date;
+        
+        return `Vào ngày ${date.toLocaleDateString('vi-VN')}, chi ${item.amount} đồng cho ${item.category} với ghi chú: ${item.note}`;
+      })
+      .join('. ');
+  }
+
+  private async saveSuggestions(opportunities: SavingOpportunity[]): Promise<void> {
+    const userId = this.authService.getCurrentUserId();
+    if (!userId) return;
+
+    const suggestionsRef = collection(this.firestore, 'suggestions');
+    
+    for (const opportunity of opportunities) {
+      await addDoc(suggestionsRef, {
+        userId,
+        categoryName: opportunity.categoryName,
+        potentialSaving: opportunity.potentialSaving,
+        suggestion: opportunity.suggestion,
+        createdAt: Timestamp.now(),
+        status: 'active'
+      });
+    }
   }
 }

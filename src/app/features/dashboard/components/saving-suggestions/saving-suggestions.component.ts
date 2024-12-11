@@ -3,9 +3,9 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { SavingSuggestion } from '../../../../core/models/spending-analysis.model';
 import { AnalysisManagerService } from '../../../../core/services/analysis-manager.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { SavingSuggestion } from '../../../../core/models/saving-suggestion.model';
 
 export interface Notification {
     id?: string;
